@@ -67,23 +67,33 @@ public class GameBrain : MonoBehaviour
     private List<int> bombs = new List<int>();
     private List<int> chests = new List<int>();
 
+    private bool waitingForDecision = false;
     private bool isDecisionMade = false;
     private int roundIndex = 0;
 
     [SerializeField]
     private UIController ui;
 
-    public string json;
+    public string jsonUrl;
+    public string saveUrl;
+    public string json;    
     public bool connected = false;
+
+    private string game_id;
+    private float roundStartTime = 0;
+    public float[] timestamps = new float[6];
+
+    
 
     void Start()
     {
+        //Application.targetFrameRate = 15; // only for fps influence test
         animatorCam = GetComponent<Animator>();
         StartCoroutine(GetSettings());
     }
 
     private IEnumerator GetSettings() {
-        using (UnityWebRequest www = UnityWebRequest.Get("http://localhost/neuropace/settings.json"))
+        using (UnityWebRequest www = UnityWebRequest.Get(jsonUrl))
         {
             yield return www.SendWebRequest();
 
@@ -102,6 +112,24 @@ public class GameBrain : MonoBehaviour
         }
     }
 
+    private IEnumerator SendTimestamps()
+    {
+        WWWForm form = new WWWForm();
+        form.AddField("id", game_id);
+        form.AddField("ts", timestampsAsString());
+
+        using (UnityWebRequest www = UnityWebRequest.Post(saveUrl, form))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result != UnityWebRequest.Result.Success)
+            {
+                Debug.Log(www.error);
+                ui.setEndScreen("Connection error");
+            }
+        }
+    }
+
     void Update()
     {
         if (!connected)
@@ -109,36 +137,52 @@ public class GameBrain : MonoBehaviour
 
         AnimatorStateInfo animStateInf = animatorCam.GetCurrentAnimatorStateInfo(0);
 
-        // if black screen appear, start new round of finish the game
+        // if black screen appear, set new round or finish the game
         if (animStateInf.IsName("CameraBlack") && isDecisionMade == true)
         {
+            timestamps[5] = Time.time - roundStartTime;
+            StartCoroutine(SendTimestamps());
+
             if (roundIndex == rounds - 1)
             {
                 animatorCam.SetFloat("mul", 0);
-                ui.setEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing\r\n\r\n(debug: 'R' for replay)");
+                ui.setEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing\r\n\r\n" + timestampsAsString() + "\r\n\r\n(debug: 'R' for replay)");
+                isDecisionMade = false; // to avoid repeting
             }
             else
+            {
+                Debug.Log("timestapms: " + timestampsAsString());
                 NewRound();
+            }
         }
 
         // this is time for player actions
         if (animStateInf.IsName("CameraWaiting"))
         {
-            if (isDecisionMade == false)
+            // run once at the beginning of CameraWaiting
+            if (isDecisionMade == false && waitingForDecision == false)
+            {
                 ui.setDescription("Waiting for action");
+                timestamps[1] = Time.time - roundStartTime;
+                waitingForDecision = true;
+            }
 
             if (Input.GetKeyDown(KeyCode.UpArrow))
             {
                 // try
+                SaveTimestamp(2);
                 animatorCam.SetTrigger("try");
                 isDecisionMade = true;
+                waitingForDecision = false;
                 ui.setDescription("");
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow))
             {
                 // escape
+                SaveTimestamp(2);
                 animatorCam.Play("CameraBlack", 0, 0f);
                 isDecisionMade = true;
+                waitingForDecision = false;
                 ui.setDescription("");
             }
         }
@@ -154,6 +198,10 @@ public class GameBrain : MonoBehaviour
         crystals = 0;
         ui.setCrystals(0);
         resolveDataConflicts();
+
+        // game_id based on date and time
+        System.DateTime date = System.DateTime.Now;
+        game_id = date.Year.ToString("0000") + date.DayOfYear.ToString("000") + date.Hour.ToString("00") + date.Minute.ToString("00") + date.Second.ToString("00");
 
         // randomly fill rounds
         fireBombs = RandomlyFilledList(rounds, explosions);
@@ -202,10 +250,15 @@ public class GameBrain : MonoBehaviour
 
         // update round index
         roundIndex++;
+
+        // reset timer
+        roundStartTime = Time.time;
+        timestamps = new float[6];
     }
 
     public void CheckBombs(string s)
     {
+        SaveTimestamp(3);
         if (fireBombs[roundIndex] == 1)
         {
             Debug.Log("Boom!");
@@ -219,6 +272,7 @@ public class GameBrain : MonoBehaviour
 
     public void CheckChests(string s)
     {
+        SaveTimestamp(4);
         kayBoxAnim.SetTrigger("open");
         if (showKey[roundIndex] == 1)
         {
@@ -229,6 +283,11 @@ public class GameBrain : MonoBehaviour
             ui.setCrystals(crystals);
             ui.setInfo(shift + " CRYSTALS EARNED");
         }
+    }
+
+    public void SaveTimestamp(int i)
+    {
+        timestamps[i] = Time.time - roundStartTime;
     }
 
     private List<int> RandomlyFilledList(int size, int fill)
@@ -257,6 +316,17 @@ public class GameBrain : MonoBehaviour
             randPoisson++;
         }
         return randPoisson / (float)lambda;
+    }
+
+    private string timestampsAsString()
+    {
+        string timestamps_str = "";
+        foreach (float t in timestamps)
+        {
+            int millis = Mathf.RoundToInt(t * 1000);
+            timestamps_str += millis.ToString() + " ";
+        }
+        return timestamps_str;
     }
 
     private void resolveDataConflicts()

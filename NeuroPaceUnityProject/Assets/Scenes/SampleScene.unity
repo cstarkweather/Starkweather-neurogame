@@ -1076,7 +1076,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!108 &705507994
 Light:
   m_ObjectHideFlags: 0
@@ -1731,8 +1731,17 @@ MonoBehaviour:
   bombParent: {fileID: 1647780276}
   chestParent: {fileID: 1006720872}
   ui: {fileID: 1787182144}
+  jsonUrl: http://www.vaticinator.com/neuropace/settings.json
+  saveUrl: http://www.vaticinator.com/neuropace/save.php
   json: 
   connected: 0
+  timestamps:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
 --- !u!1001 &982221278
 PrefabInstance:
   m_ObjectHideFlags: 0
