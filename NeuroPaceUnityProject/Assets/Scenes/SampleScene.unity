@@ -1710,16 +1710,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2291d6708e5643343934d6ddba8c0807, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  crystals: 0
-  rounds: 8
-  explosions: 4
-  keys: 4
-  allbombs: 4
-  litbombs: 3
-  allchests: 6
-  litchests: 3
-  punishment: 1
-  revenue: 1
+  currentTrial: 0
   fireBombs: 
   showKey: 
   bombLit: {fileID: 8872266788210343447, guid: f45b5bf95427fe249aac1028c1abc954, type: 3}
@@ -1727,7 +1718,7 @@ MonoBehaviour:
   chestLit: {fileID: 1014881239970378771, guid: adbb16ad476e6304197a02134fb6f384, type: 3}
   chestUnlit: {fileID: 1014881239970378771, guid: 00d3433205f180f49815eeea35ec3ff5, type: 3}
   key: {fileID: 1758276310}
-  kayBoxAnim: {fileID: 1624560151}
+  keyBoxAnim: {fileID: 1624560151}
   bombParent: {fileID: 1647780276}
   chestParent: {fileID: 1006720872}
   ui: {fileID: 1787182144}

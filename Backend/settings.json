@@ -1,1 +1,15 @@
-{"rounds":8,"explosions":4,"keys":4,"allbombs":4,"litbombs":2,"allchests":6,"litchests":3,"punishment":1,"revenue":1}
+{
+  "trial_types": [
+    {"id":1, "bombs":4, "bombs_lit":0, "chests":6, "chests_lit":2},
+    {"id":2, "bombs":4, "bombs_lit":1, "chests":6, "chests_lit":2},
+    {"id":3, "bombs":4, "bombs_lit":2, "chests":8, "chests_lit":3},
+    {"id":4, "bombs":4, "bombs_lit":3, "chests":8, "chests_lit":3}
+  ],
+  "game_settings":{
+    "trials_pool": [1,1,2,2,3,3,4,4],
+    "reward_for_chest": 10,
+    "cost_for_bomb_explosion": 20,
+    "trials_to_explode": 2,
+    "trials_to_show_key": 1
+  }
+}
