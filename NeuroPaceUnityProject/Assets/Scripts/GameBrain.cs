@@ -6,7 +6,6 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Networking;
 using Newtonsoft.Json;
 
-
 public class GameBrain : MonoBehaviour
 {
     private Animator animatorCam;
@@ -17,8 +16,7 @@ public class GameBrain : MonoBehaviour
     private int currentTrial = 0;
     TrialType currentTrialType;
 
-    private bool waitingForDecision = false;
-    private bool isDecisionMade = false;
+    private bool isTrialStarted = false;
 
     [SerializeField]
     private int[] fireBombs; // per round: (true / false)
@@ -92,7 +90,8 @@ public class GameBrain : MonoBehaviour
             else
             {
                 Debug.Log(www.error);
-                ui.setEndScreen("Connection error");
+                ui.setEndScreen("Connection error.\r\nRetrying to connect...");
+                StartCoroutine(GetSettings());
             }
         }
     }
@@ -101,7 +100,7 @@ public class GameBrain : MonoBehaviour
     {
         WWWForm form = new WWWForm();
         form.AddField("id", game_id);
-        form.AddField("ts", timestampsAsString());
+        form.AddField("ts", TimestampsAsString());
 
         using (UnityWebRequest www = UnityWebRequest.Post(saveUrl, form))
         {
@@ -111,6 +110,10 @@ public class GameBrain : MonoBehaviour
             {
                 Debug.Log(www.error);
                 ui.setEndScreen("Connection error");
+            }
+            else
+            {
+                StartCoroutine(SendTimestamps()); // <--------------------- if send timestamps every trial finished - connection error should appear and game pause
             }
         }
     }
@@ -122,43 +125,54 @@ public class GameBrain : MonoBehaviour
 
         AnimatorStateInfo animStateInf = animatorCam.GetCurrentAnimatorStateInfo(0);
 
-        // if black screen appear (but not the first time [isDecisionMade is false on game start]), set new round or finish the game
-        if (animStateInf.IsName("CameraBlack") && isDecisionMade == true)
+        // timestamps (NOTE: timestamp[2] is writing on KeyDown)
+        if (timestamps[0] == 0 && animStateInf.IsName("CameraEntryWalk"))
         {
-            //timestamps[5] = Time.time - roundStartTime;
+            SaveTimestamp(0);
+            isTrialStarted = true;
+        }
+        else if (timestamps[1] == 0 && animStateInf.IsName("CameraWaiting"))
+        {
+            SaveTimestamp(1);
+            ui.setDescription("Waiting for action");
+        }
+        else if (timestamps[3] == 0 && animStateInf.IsName("CameraBraveWalk") && animStateInf.normalizedTime >= 0.5f)
+        {
+            SaveTimestamp(3);
+            CheckBombs();
+        }
+        else if (timestamps[4] == 0 && animStateInf.IsName("CameraWaitForKey"))
+        {
+            SaveTimestamp(4);
+            CheckChests();
+        }
+        else if (timestamps[5] == 0 && animStateInf.IsName("CameraBlack") && isTrialStarted)
+        {
+            SaveTimestamp(5);
+            Debug.Log("timestapms: " + TimestampsAsString());
             StartCoroutine(SendTimestamps());
+            isTrialStarted = false;
 
             if (currentTrial == gameParams.game_settings.trials_pool.Count - 1)
             {
+                // last trial
                 animatorCam.SetFloat("mul", 0);
-                ui.setEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing\r\n\r\n" + timestampsAsString() + "\r\n\r\n(debug: 'R' for replay)");
-                isDecisionMade = false; // to avoid repeting
+                ui.setEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing\r\n\r\n" + TimestampsAsString() + "\r\n\r\n(debug: 'R' for replay)");
             }
             else
             {
-                Debug.Log("timestapms: " + timestampsAsString());
                 NewRound();
             }
         }
 
-        // this is time for player actions
+        // time to player action
         if (animStateInf.IsName("CameraWaiting"))
         {
-            // run once at the beginning of CameraWaiting
-            if (isDecisionMade == false && waitingForDecision == false)
-            {
-                ui.setDescription("Waiting for action");
-                timestamps[1] = Time.time - roundStartTime;
-                waitingForDecision = true;
-            }
-
             if (Input.GetKeyDown(KeyCode.UpArrow))
             {
                 // try
                 SaveTimestamp(2);
                 animatorCam.SetTrigger("try");
-                isDecisionMade = true;
-                waitingForDecision = false;
                 ui.setDescription("");
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow))
@@ -166,8 +180,6 @@ public class GameBrain : MonoBehaviour
                 // escape
                 SaveTimestamp(2);
                 animatorCam.Play("CameraBlack", 0, 0f);
-                isDecisionMade = true;
-                waitingForDecision = false;
                 ui.setDescription("");
             }
         }
@@ -182,7 +194,7 @@ public class GameBrain : MonoBehaviour
         Debug.Log("New Game");
         crystals = 0;
         ui.setCrystals(0);
-        resolveDataConflicts();
+        ResolveDataConflicts();
 
         // game_id based on date and time
         System.DateTime date = System.DateTime.Now;
@@ -192,12 +204,14 @@ public class GameBrain : MonoBehaviour
         int trialsNumber = gameParams.game_settings.trials_pool.Count;
 
         // randomly fill trials scenario
-        fireBombs = RandomlyFilledList(trialsNumber, gameParams.game_settings.trials_to_explode);
-        showKey = RandomlyFilledList(trialsNumber, gameParams.game_settings.trials_to_show_key);
+        fireBombs = FillRandomly(trialsNumber, gameParams.game_settings.trials_to_explode);
+        showKey = FillRandomly(trialsNumber, gameParams.game_settings.trials_to_show_key);
+        // avoid appearing key when explosion (infinity loop risk if not resolveDataConflicts() before)
+        while (fireBombs.Zip(showKey, (x, y) => x + y).Max() > 1)
+            showKey = FillRandomly(trialsNumber, gameParams.game_settings.trials_to_show_key);
 
         // shuffle trials_pool
         gameParams.game_settings.trials_pool = Shuffle(gameParams.game_settings.trials_pool, 15);
-        //Debug.Log("trials: " + string.Join(", ", gameParams.game_settings.trials_pool));
 
         // start 1st round
         currentTrial = -1;
@@ -209,18 +223,18 @@ public class GameBrain : MonoBehaviour
         // update round index
         currentTrial++;
 
+        // get current trial type
+        currentTrialType = GetTrialType(currentTrial);
+
         // clear assets
         for (int i = 0; i < bombParent.childCount; i++)
             GameObject.Destroy(bombParent.GetChild(i).gameObject);
         for (int i = 0; i < chestParent.childCount; i++)
             GameObject.Destroy(chestParent.GetChild(i).gameObject);
 
-        // get current trial type
-        currentTrialType = GetTrialType(currentTrial);
-
         // spawn assets
-        bombs = RandomlyFilledList(currentTrialType.bombs, currentTrialType.bombs_lit);
-        chests = RandomlyFilledList(currentTrialType.chests, currentTrialType.chests_lit);
+        bombs = FillRandomly(currentTrialType.bombs, currentTrialType.bombs_lit);
+        chests = FillRandomly(currentTrialType.chests, currentTrialType.chests_lit);
 
         float x_offset = 1.3f;
         for (int i=0; i < bombs.Length; i++)
@@ -240,7 +254,6 @@ public class GameBrain : MonoBehaviour
         animatorCam.SetFloat("mul", PoissonRandom(20));
 
         // clear activities and messages
-        isDecisionMade = false;
         ui.setRounds(currentTrial + 1);
         ui.setInfo("");
         ui.setDescription("");
@@ -264,10 +277,8 @@ public class GameBrain : MonoBehaviour
         return gameParams.trial_types[0];
     }
 
-    public void CheckBombs(string s)
+    public void CheckBombs()
     {
-        SaveTimestamp(3);
-
         if (fireBombs[currentTrial] == 1)
         {
             Debug.Log("Boom!");
@@ -279,9 +290,8 @@ public class GameBrain : MonoBehaviour
         }
     }
 
-    public void CheckChests(string s)
+    public void CheckChests()
     {
-        SaveTimestamp(4);
         keyBoxAnim.SetTrigger("open");
         if (showKey[currentTrial] == 1)
         {
@@ -299,7 +309,7 @@ public class GameBrain : MonoBehaviour
         timestamps[i] = Time.time - roundStartTime;
     }
 
-    private int[] RandomlyFilledList(int size, int fill)
+    private int[] FillRandomly(int size, int fill)
     {
         fill = Mathf.Min(size, fill);
         int[] list = new int[size];
@@ -340,7 +350,7 @@ public class GameBrain : MonoBehaviour
         return randPoisson / (float)lambda;
     }
 
-    private string timestampsAsString()
+    private string TimestampsAsString()
     {
         string timestamps_str = "";
         foreach (float t in timestamps)
@@ -351,7 +361,7 @@ public class GameBrain : MonoBehaviour
         return timestamps_str;
     }
 
-    private void resolveDataConflicts()
+    private void ResolveDataConflicts()
     {
         int rounds = gameParams.game_settings.trials_pool.Count;
         gameParams.game_settings.trials_to_explode = Mathf.Clamp(gameParams.game_settings.trials_to_explode, 0, rounds - gameParams.game_settings.trials_to_show_key);
