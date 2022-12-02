@@ -96,11 +96,12 @@ public class GameBrain : MonoBehaviour
         }
     }
 
-    private IEnumerator SendTimestamps()
+    private IEnumerator SendTimestamps(int trial_index, string log)
     {
         WWWForm form = new WWWForm();
         form.AddField("id", game_id);
-        form.AddField("ts", TimestampsAsString());
+        form.AddField("log", log);
+        form.AddField("t", trial_index);        
 
         using (UnityWebRequest www = UnityWebRequest.Post(saveUrl, form))
         {
@@ -110,10 +111,7 @@ public class GameBrain : MonoBehaviour
             {
                 Debug.Log(www.error);
                 ui.setEndScreen("Connection error");
-            }
-            else
-            {
-                StartCoroutine(SendTimestamps()); // <--------------------- if send timestamps every trial finished - connection error should appear and game pause
+                StartCoroutine(SendTimestamps(trial_index, log));
             }
         }
     }
@@ -150,7 +148,7 @@ public class GameBrain : MonoBehaviour
         {
             SaveTimestamp(5);
             Debug.Log("timestapms: " + TimestampsAsString());
-            StartCoroutine(SendTimestamps());
+            StartCoroutine(SendTimestamps(currentTrial, TimestampsAsString()));
             isTrialStarted = false;
 
             if (currentTrial == gameParams.game_settings.trials_pool.Count - 1)
