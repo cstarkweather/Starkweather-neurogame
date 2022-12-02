@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: cb180b591e7946a4a801dd8d87d9e8f1
+guid: edbaa232256ad1740bba898b0d8f58c6
 ModelImporter:
   serializedVersion: 21300
   internalIDToNameTable: []
@@ -7,8 +7,8 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Key
-    second: {fileID: 2100000, guid: 3b424a8d3d804d142bdd266859408bca, type: 2}
+      name: Box
+    second: {fileID: 2100000, guid: 8374f2105bc29b642910aa190f801661, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -40,7 +40,7 @@ ModelImporter:
     isReadable: 0
   meshes:
     lODScreenPercentages: []
-    globalScale: 0.3
+    globalScale: 2
     meshCompression: 0
     addColliders: 0
     useSRGBMaterialColor: 1
@@ -93,7 +93,7 @@ ModelImporter:
     armStretch: 0.05
     legStretch: 0.05
     feetSpacing: 0
-    globalScale: 0.3
+    globalScale: 0.02
     rootMotionBoneName: 
     hasTranslationDoF: 0
     hasExtraRoot: 0

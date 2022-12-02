@@ -235,6 +235,7 @@ public class GameBrain : MonoBehaviour
         chests = FillRandomly(currentTrialType.chests, currentTrialType.chests_lit);
 
         float x_offset = 1.3f;
+        float y_rot = 20f;
         for (int i=0; i < bombs.Length; i++)
         {
             GameObject b = (bombs[i] == 0) ? Instantiate(bombUnlit, bombParent) : Instantiate(bombLit, bombParent);
@@ -246,6 +247,7 @@ public class GameBrain : MonoBehaviour
             GameObject b = (chests[i] == 0) ? Instantiate(chestUnlit, chestParent) : Instantiate(chestLit, chestParent);
             x_offset = (i == 2 || i == 3) ? 1f : 0.75f;
             b.transform.localPosition = new Vector3((i % 2 == 0) ? x_offset : -x_offset, Mathf.FloorToInt(i / 2) * 0.75f, 0);
+            b.transform.Rotate(new Vector3(0, (i % 2 == 0) ? 20 : -20, 0));
         }
 
         // Poisson for black screen
