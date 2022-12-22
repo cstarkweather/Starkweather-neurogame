@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 		}
 		fclose($fp);
 	}catch ( Exception $e ) {
-		print('save log error');
+		print($e);
 	}
 }
 	
