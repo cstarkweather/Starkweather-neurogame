@@ -196,7 +196,7 @@ public class GameBrain : MonoBehaviour
 
         // game_id based on date and time
         System.DateTime date = System.DateTime.Now;
-        game_id = user_id + date.ToString("_yyyy-MM-dd_HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        game_id = user_id + date.ToString("_yyyy-MM-dd_HH-mm", System.Globalization.CultureInfo.InvariantCulture);
 
         // get trials number
         int trialsNumber = gameParams.game_settings.trials_pool.Count;
