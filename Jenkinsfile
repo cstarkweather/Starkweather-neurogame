@@ -50,7 +50,6 @@ pipeline {
         }
       }
     }
-    */
     stage('Build WebGL (Debug)') {
       agent {
         label 'windows-unity-builder'
