@@ -1525,7 +1525,7 @@ MonoBehaviour:
   m_Version: 2
 --- !u!95 &963194230
 Animator:
-  serializedVersion: 4
+  serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -1542,7 +1542,7 @@ Animator:
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorControllerStateOnDisable: 0
+  m_KeepAnimatorStateOnDisable: 0
 --- !u!114 &963194231
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1567,8 +1567,8 @@ MonoBehaviour:
   bombParent: {fileID: 1647780276}
   chestParent: {fileID: 1006720872}
   ui: {fileID: 1787182144}
-  jsonUrl: http://www.vaticinator.com/neuropace/settings.json
-  saveUrl: http://www.vaticinator.com/neuropace/save.php
+  jsonUrl: https://cat-astrophe-games.party/neuropace/settings.json
+  saveUrl: https://cat-astrophe-games.party/neuropace/save.php
   json: 
   connected: 0
   timestamps:
