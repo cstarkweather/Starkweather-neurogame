@@ -64,7 +64,7 @@ public class GameBrain : MonoBehaviour
     {
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-        gameUrl = Application.absoluteURL;
+        string gameUrl = Application.absoluteURL;
         if (Application.absoluteURL.IndexOf("=") > 0)
             user_id = Application.absoluteURL.Split('=')[1];
 #endif
