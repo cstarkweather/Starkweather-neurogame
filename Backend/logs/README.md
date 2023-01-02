@@ -1,0 +1,1 @@
+This folder will contain logs. Note that on the server, they should be owned (and writeable) by the Apache user, like www-data.

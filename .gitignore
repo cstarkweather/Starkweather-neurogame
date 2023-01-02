@@ -61,3 +61,6 @@ crashlytics-build.properties
 
 # Blender temporary file
 *.blend1
+
+# This Project related
+Backend/logs/*.txt
