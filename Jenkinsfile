@@ -79,7 +79,7 @@ pipeline {
           SAFE_BRANCH_NAME=`echo -n "${BRANCH_NAME}" | tr "./_" -` &&
           ZIP_NAME=latest-$CAG_PROJECT_NAME-$SAFE_BRANCH_NAME-$BUILD_NUMBER &&
           scp build/NeuroPace-WebGL-Debug.zip neuropace@michalis.ii.uni.wroc.pl:/home/neuropace/$ZIP_NAME.zip &&
-          ssh neuropace@michalis.ii.uni.wroc.pl "bash -s" -- $ZIP_NAME $CAG_PROJECT_NAME $SAFE_BRANCH_NAME $BUILD_NUMBER $GIT_COMMIT < ~/build-scripts/bin/cag-paima-update-latest-www
+          ssh neuropace@michalis.ii.uni.wroc.pl "bash -s" -- $ZIP_NAME $CAG_PROJECT_NAME $SAFE_BRANCH_NAME $BUILD_NUMBER $GIT_COMMIT < /usr/local/bin/cag-deploy-webgl
         '''
       }
     }
