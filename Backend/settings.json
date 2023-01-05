@@ -10,6 +10,7 @@
     "reward_for_chest": 10,
     "cost_for_bomb_explosion": 20,
     "trials_to_explode": 2,
-    "trials_to_show_key": 1
+    "trials_to_show_key": 1,
+	"allowed_error_from_target_ratio":[0.0005,0.5]
   }
 }
