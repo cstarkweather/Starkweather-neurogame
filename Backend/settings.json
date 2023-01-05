@@ -6,7 +6,7 @@
     {"id":4, "bombs":4, "bombs_lit":3, "chests":8, "chests_lit":3}
   ],
   "game_settings":{
-    "trials_pool": [1,1,2,2,3,3,4,4],
+    "number_of_trials_per_trial_type": 2,
     "reward_for_chest": 10,
     "cost_for_bomb_explosion": 20,
     "trials_to_explode": 2,
