@@ -58,7 +58,7 @@ pipeline {
         dir ("NeuroPaceUnityProject") {
           sh 'cag-build-webgl Debug'
           archiveArtifacts artifacts: "build/NeuroPace-WebGL.zip"
-          stash includes: "build/NeuroPace-WebGL.zip", name: 'webgl-build-release'
+          stash includes: "build/NeuroPace-WebGL.zip", name: 'webgl-build-debug'
         }
       }
     }
