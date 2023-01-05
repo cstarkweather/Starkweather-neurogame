@@ -59,6 +59,8 @@ public class GameBrain : MonoBehaviour
     private string game_id;
     private float roundStartTime = 0;
     public float[] timestamps = new float[6];
+    private List<int> trials_pool = new List<int>();
+    public float errorChance = 0.5f;
 
     void Start()
     {
@@ -151,7 +153,7 @@ public class GameBrain : MonoBehaviour
             StartCoroutine(SendTimestamps(currentTrial, TimestampsAsString()));
             isTrialStarted = false;
 
-            if (currentTrial == gameParams.game_settings.trials_pool.Count - 1)
+            if (currentTrial == trials_pool.Count - 1)
             {
                 // last trial
                 animatorCam.SetFloat("mul", 0);
@@ -192,24 +194,32 @@ public class GameBrain : MonoBehaviour
         Debug.Log("New Game");
         crystals = 0;
         ui.setCrystals(0);
-        ResolveDataConflicts();
+        //ResolveDataConflicts();
 
         // game_id based on date and time
         System.DateTime date = System.DateTime.Now;
         game_id = user_id + date.ToString("_yyyy-MM-dd_HH-mm", System.Globalization.CultureInfo.InvariantCulture);
 
-        // get trials number
-        int trialsNumber = gameParams.game_settings.trials_pool.Count;
+        // fill trials pool
+        foreach(TrialType trial in gameParams.trial_types)
+        {
+            for (int i = 0; i < gameParams.game_settings.number_of_trials_per_trial_type; i++)
+            {
+                trials_pool.Add(trial.id);
+            }
+        }
 
+        /*
         // randomly fill trials scenario
         fireBombs = FillRandomly(trialsNumber, gameParams.game_settings.trials_to_explode);
         showKey = FillRandomly(trialsNumber, gameParams.game_settings.trials_to_show_key);
         // avoid appearing key when explosion (infinity loop risk if not resolveDataConflicts() before)
         while (fireBombs.Zip(showKey, (x, y) => x + y).Max() > 1)
             showKey = FillRandomly(trialsNumber, gameParams.game_settings.trials_to_show_key);
+        */
 
         // shuffle trials_pool
-        gameParams.game_settings.trials_pool = Shuffle(gameParams.game_settings.trials_pool, 15);
+        trials_pool = Shuffle(trials_pool, 15);
 
         // start 1st round
         currentTrial = -1;
@@ -247,7 +257,7 @@ public class GameBrain : MonoBehaviour
             GameObject b = (chests[i] == 0) ? Instantiate(chestUnlit, chestParent) : Instantiate(chestLit, chestParent);
             x_offset = (i == 2 || i == 3) ? 1f : 0.75f;
             b.transform.localPosition = new Vector3((i % 2 == 0) ? x_offset : -x_offset, Mathf.FloorToInt(i / 2) * 0.75f, 0);
-            b.transform.Rotate(new Vector3(0, (i % 2 == 0) ? 20 : -20, 0));
+            b.transform.Rotate(new Vector3(0, (i % 2 == 0) ? y_rot : -y_rot, 0));
         }
 
         // Poisson for black screen
@@ -267,7 +277,7 @@ public class GameBrain : MonoBehaviour
 
     private TrialType GetTrialType(int i)
     {
-        int trial_type = gameParams.game_settings.trials_pool[i];
+        int trial_type = trials_pool[i];
 
         foreach (TrialType t in gameParams.trial_types)
             if(t.id == trial_type)
@@ -279,7 +289,7 @@ public class GameBrain : MonoBehaviour
 
     public void CheckBombs()
     {
-        if (fireBombs[currentTrial] == 1)
+        if (errorChance < Random.value)
         {
             Debug.Log("Boom!");
             animatorCam.Play("CameraExplode", 0, 0f);
@@ -293,7 +303,7 @@ public class GameBrain : MonoBehaviour
     public void CheckChests()
     {
         keyBoxAnim.SetTrigger("open");
-        if (showKey[currentTrial] == 1)
+        if (errorChance > Random.value)
         {
             Debug.Log("Key!");
             key.SetActive(true);
@@ -360,13 +370,14 @@ public class GameBrain : MonoBehaviour
         }
         return timestamps_str;
     }
-
+    /*
     private void ResolveDataConflicts()
     {
-        int rounds = gameParams.game_settings.trials_pool.Count;
+        int rounds = trials_pool.Count;
         gameParams.game_settings.trials_to_explode = Mathf.Clamp(gameParams.game_settings.trials_to_explode, 0, rounds - gameParams.game_settings.trials_to_show_key);
         gameParams.game_settings.trials_to_show_key = Mathf.Clamp(gameParams.game_settings.trials_to_show_key, 0, rounds);
     }
+    */
 }
 
 public class TrialType
@@ -380,11 +391,12 @@ public class TrialType
 
 public class GameSettings
 {
-    public List<int> trials_pool;
+    public int number_of_trials_per_trial_type;
     public int reward_for_chest;
     public int cost_for_bomb_explosion;
     public int trials_to_explode;
     public int trials_to_show_key;
+    public List<float> allowed_error_from_target_ratio;
 }
 
 public class GameParams
