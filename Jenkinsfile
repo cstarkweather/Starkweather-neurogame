@@ -57,7 +57,7 @@ pipeline {
       steps {
         dir ("NeuroPaceUnityProject") {
           sh 'cag-build-webgl Debug'
-          sh 'mv -f "build/NeuroPace-WebGL.zip" "build/NeuroPace-Debug.zip"'
+          sh 'mv -f "build/NeuroPace-WebGL.zip" "build/NeuroPace-WebGL-Debug.zip"'
           archiveArtifacts artifacts: "build/NeuroPace-WebGL-Debug.zip"
           stash includes: "build/NeuroPace-WebGL-Debug.zip", name: 'webgl-build-debug'
         }
@@ -78,7 +78,7 @@ pipeline {
           CAG_PROJECT_NAME='neuropace-debug' &&
           SAFE_BRANCH_NAME=`echo -n "${BRANCH_NAME}" | tr "./_" -` &&
           ZIP_NAME=latest-$CAG_PROJECT_NAME-$SAFE_BRANCH_NAME-$BUILD_NUMBER &&
-          scp build/NeuroPace-WebGL-Debug-Debug.zip neuropace@michalis.ii.uni.wroc.pl:/home/neuropace/$ZIP_NAME.zip &&
+          scp build/NeuroPace-WebGL-Debug.zip neuropace@michalis.ii.uni.wroc.pl:/home/neuropace/$ZIP_NAME.zip &&
           ssh neuropace@michalis.ii.uni.wroc.pl "bash -s" -- $ZIP_NAME $CAG_PROJECT_NAME $SAFE_BRANCH_NAME $BUILD_NUMBER $GIT_COMMIT < ~/build-scripts/bin/cag-paima-update-latest-www
         '''
       }
