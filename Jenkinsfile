@@ -57,11 +57,32 @@ pipeline {
       steps {
         dir ("NeuroPaceUnityProject") {
           sh 'cag-build-webgl Debug'
-          archiveArtifacts artifacts: "build/*.zip"
+          sh 'mv -f "build/NeuroPace-WebGL.zip" "build/NeuroPace-WebGL-Debug.zip"'
+          archiveArtifacts artifacts: "build/NeuroPace-WebGL-Debug.zip"
+          stash includes: "build/NeuroPace-WebGL-Debug.zip", name: 'webgl-build-debug'
         }
       }
     }
-    /* TODO: deploy */
+    stage('Deploy to https://cat-astrophe-games.party/neuropace/app/ (Debug)') {
+      agent {
+        label 'jenkins-webgl-deployer'
+      }
+      steps {
+        unstash 'webgl-build-debug'
+        /* Note that the zip filename is also determined by branch, build number etc.
+           to avoid having problems due to multiple builds using this script overriding
+           the same zip file, and causing trouble in case of multiple executions of this script
+           going in parallel.
+        */
+        sh '''
+          CAG_PROJECT_NAME='neuropace-debug' &&
+          SAFE_BRANCH_NAME=`echo -n "${BRANCH_NAME}" | tr "./_" -` &&
+          ZIP_NAME=latest-$CAG_PROJECT_NAME-$SAFE_BRANCH_NAME-$BUILD_NUMBER &&
+          scp build/NeuroPace-WebGL-Debug.zip neuropace@michalis.ii.uni.wroc.pl:/home/neuropace/$ZIP_NAME.zip &&
+          ssh neuropace@michalis.ii.uni.wroc.pl "bash -s" -- $ZIP_NAME $CAG_PROJECT_NAME $SAFE_BRANCH_NAME $BUILD_NUMBER $GIT_COMMIT < /usr/local/bin/cag-deploy-webgl
+        '''
+      }
+    }
   }
   post {
     success {
