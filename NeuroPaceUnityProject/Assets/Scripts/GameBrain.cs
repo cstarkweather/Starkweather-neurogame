@@ -9,14 +9,14 @@ using Newtonsoft.Json;
 public class GameBrain : MonoBehaviour
 {
     private Animator animatorCam;
-    private GameParams gameParams;
+    private game_params game_params;
     private int crystals = 0;
 
     [SerializeField]
-    private int currentTrial = 0;
-    TrialType currentTrialType;
+    private int current_trial = 0;
+    TrialType current_trial_type;
 
-    private bool isTrialStarted = false;
+    private bool is_trial_started = false;
 
     [SerializeField]
     private int[] fireBombs; // per round: (true / false)
@@ -46,7 +46,7 @@ public class GameBrain : MonoBehaviour
     private Transform chestParent;
     private int[] bombs;
     private int[] chests;
-    private List<GameObject> bombsLit = new List<GameObject>();
+    private List<GameObject> bombsAll = new List<GameObject>();
     private List<GameObject> chestsLit = new List<GameObject>();
 
     [SerializeField]
@@ -62,7 +62,10 @@ public class GameBrain : MonoBehaviour
     private float roundStartTime = 0;
     public float[] timestamps = new float[6];
     private List<int> trials_pool = new List<int>();
-    public float errorChance = 0.5f;
+    
+    public int trials_where_player_went_forward = 0;
+    public int trials_that_exploded_so_far = 0;
+    public int trials_that_rewarded_so_far = 0;
 
     void Start()
     {
@@ -86,7 +89,7 @@ public class GameBrain : MonoBehaviour
             if (www.result == UnityWebRequest.Result.Success)
             {
                 json = www.downloadHandler.text;
-                gameParams = JsonConvert.DeserializeObject<GameParams>(json);
+                game_params = JsonConvert.DeserializeObject<game_params>(json);
                 connected = true;
                 Time.timeScale = 1;
                 NewGame();
@@ -131,7 +134,7 @@ public class GameBrain : MonoBehaviour
         if (timestamps[0] == 0 && animStateInf.IsName("CameraEntryWalk"))
         {
             SaveTimestamp(0);
-            isTrialStarted = true;
+            is_trial_started = true;
         }
         else if (timestamps[1] == 0 && animStateInf.IsName("CameraWaiting"))
         {
@@ -148,14 +151,14 @@ public class GameBrain : MonoBehaviour
             SaveTimestamp(4);
             CheckChests();
         }
-        else if (timestamps[5] == 0 && animStateInf.IsName("CameraBlack") && isTrialStarted)
+        else if (timestamps[5] == 0 && animStateInf.IsName("CameraBlack") && is_trial_started)
         {
             SaveTimestamp(5);
-            Debug.Log("timestapms: " + TimestampsAsString());
-            StartCoroutine(SendTimestamps(currentTrial, TimestampsAsString()));
-            isTrialStarted = false;
+            //Debug.Log("timestapms: " + TimestampsAsString());
+            StartCoroutine(SendTimestamps(current_trial, TimestampsAsString()));
+            is_trial_started = false;
 
-            if (currentTrial == trials_pool.Count - 1)
+            if (current_trial == trials_pool.Count - 1)
             {
                 // last trial
                 animatorCam.SetFloat("mul", 0);
@@ -176,6 +179,7 @@ public class GameBrain : MonoBehaviour
                 SaveTimestamp(2);
                 animatorCam.SetTrigger("try");
                 ui.setDescription("");
+                trials_where_player_went_forward += 1;
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow))
             {
@@ -196,45 +200,35 @@ public class GameBrain : MonoBehaviour
         Debug.Log("New Game");
         crystals = 0;
         ui.setCrystals(0);
-        //ResolveDataConflicts();
 
         // game_id based on date and time
         System.DateTime date = System.DateTime.Now;
         game_id = user_id + date.ToString("_yyyy-MM-dd_HH-mm", System.Globalization.CultureInfo.InvariantCulture);
 
         // fill trials pool
-        foreach(TrialType trial in gameParams.trial_types)
+        foreach(TrialType trial in game_params.trial_types)
         {
-            for (int i = 0; i < gameParams.game_settings.number_of_trials_per_trial_type; i++)
+            for (int i = 0; i < game_params.game_settings.number_of_trials_per_trial_type; i++)
             {
                 trials_pool.Add(trial.id);
             }
         }
 
-        /*
-        // randomly fill trials scenario
-        fireBombs = FillRandomly(trialsNumber, gameParams.game_settings.trials_to_explode);
-        showKey = FillRandomly(trialsNumber, gameParams.game_settings.trials_to_show_key);
-        // avoid appearing key when explosion (infinity loop risk if not resolveDataConflicts() before)
-        while (fireBombs.Zip(showKey, (x, y) => x + y).Max() > 1)
-            showKey = FillRandomly(trialsNumber, gameParams.game_settings.trials_to_show_key);
-        */
-
         // shuffle trials_pool
         trials_pool = Shuffle(trials_pool, 15);
 
         // start 1st round
-        currentTrial = -1;
+        current_trial = -1;
         NewRound();
     }
 
     private void NewRound()
     {
         // update round index
-        currentTrial++;
+        current_trial++;
 
         // get current trial type
-        currentTrialType = GetTrialType(currentTrial);
+        current_trial_type = GetTrialType(current_trial);
 
         // clear assets
         for (int i = 0; i < bombParent.childCount; i++)
@@ -243,9 +237,9 @@ public class GameBrain : MonoBehaviour
             GameObject.Destroy(chestParent.GetChild(i).gameObject);
 
         // spawn assets        
-        bombs = FillRandomly(currentTrialType.bombs, currentTrialType.bombs_lit);
-        chests = FillRandomly(currentTrialType.chests, currentTrialType.chests_lit);
-        bombsLit = new List<GameObject>();
+        bombs = FillRandomly(current_trial_type.bombs, current_trial_type.bombs_lit);
+        chests = FillRandomly(current_trial_type.chests, current_trial_type.chests_lit);
+        bombsAll = new List<GameObject>();
         chestsLit = new List<GameObject>();
 
         float x_offset = 1.4f;
@@ -254,7 +248,7 @@ public class GameBrain : MonoBehaviour
         {
             GameObject b = (bombs[i] == 0) ? Instantiate(bombUnlit, bombParent) : Instantiate(bombLit, bombParent);
             b.transform.localPosition = new Vector3((i % 2 == 0) ? x_offset : -x_offset, Mathf.FloorToInt(i / 2) + 0.45f, 0);
-            if (bombs[i] == 1) bombsLit.Add(b);
+            bombsAll.Add(b);
         }
         x_offset = 1.3f;
         for (int i = 0; i < chests.Length; i++)
@@ -270,7 +264,7 @@ public class GameBrain : MonoBehaviour
         animatorCam.SetFloat("mul", PoissonRandom(20));
 
         // clear activities and messages
-        ui.setRounds(currentTrial + 1);
+        ui.setRounds(current_trial + 1);
         ui.setInfo("");
         ui.setDescription("");
         ui.setEndScreen("");
@@ -285,25 +279,26 @@ public class GameBrain : MonoBehaviour
     {
         int trial_type = trials_pool[i];
 
-        foreach (TrialType t in gameParams.trial_types)
+        foreach (TrialType t in game_params.trial_types)
             if(t.id == trial_type)
                 return t;
 
         // if nothing match get the first one
-        return gameParams.trial_types[0];
+        return game_params.trial_types[0];
     }
 
     public void CheckBombs()
     {
-        if (errorChance < Random.value && bombsLit.Count > 0)
+        if (PlayEvent(trials_that_exploded_so_far))
         {
-            Debug.Log("Boom!");
+            //Debug.Log("Boom!");
+            trials_that_exploded_so_far += 1;
             animatorCam.Play("CameraExplode", 0, 0f);
-            int crystals_shift = currentTrialType.bombs_lit * gameParams.game_settings.cost_for_bomb_explosion;
+            int crystals_shift = current_trial_type.bombs_lit * game_params.game_settings.cost_for_bomb_explosion;
             crystals -= crystals_shift;
             ui.setCrystals(crystals);
             ui.setInfo(crystals_shift + " CRYSTALS LOST");
-            foreach (GameObject bomb in bombsLit)
+            foreach (GameObject bomb in bombsAll)
             {
                 foreach(ParticleSystem ps in bomb.GetComponentsInChildren<ParticleSystem>())
                     ps.Play();
@@ -314,11 +309,12 @@ public class GameBrain : MonoBehaviour
     public void CheckChests()
     {
         keyBoxAnim.SetTrigger("open");
-        if (errorChance > Random.value)
+        if (PlayEvent(trials_that_rewarded_so_far))
         {
-            Debug.Log("Key!");
+            //Debug.Log("Key!");
+            trials_that_rewarded_so_far += 1;
             key.SetActive(true);
-            int crystals_shift = currentTrialType.chests_lit * gameParams.game_settings.reward_for_chest;
+            int crystals_shift = current_trial_type.chests_lit * game_params.game_settings.reward_for_chest;
             crystals += crystals_shift;
             ui.setCrystals(crystals);
             ui.setInfo(crystals_shift + " CRYSTALS EARNED");
@@ -328,6 +324,21 @@ public class GameBrain : MonoBehaviour
                 chest.GetComponent<ParticleSystem>().Play();
             }
         }
+    }
+
+    public bool PlayEvent(float trials_that_played_so_far)
+    {
+        float trials_to_explode_ratio = (float)game_params.game_settings.trials_to_explode / (float)trials_pool.Count;
+        float a = Mathf.Abs((trials_that_played_so_far + 1) / ((float)trials_where_player_went_forward) - trials_to_explode_ratio);
+        float b = Mathf.Abs((trials_that_played_so_far) / ((float)trials_where_player_went_forward) - trials_to_explode_ratio);
+        float t = ((float)current_trial) / ((float)trials_pool.Count - 1);
+        float epsilon = Mathf.Lerp(game_params.game_settings.allowed_error_from_target_ratio[0], game_params.game_settings.allowed_error_from_target_ratio[1], t);
+        //Debug.Log("x: " + a.ToString() + " y: " + b.ToString() + " t: " + t + " epsilon: " + epsilon.ToString());
+
+        if (Mathf.Abs(a - b) > epsilon)
+            return Random.value > 0.5f;
+        else
+            return a < b;
     }
 
     public void SaveTimestamp(int i)
@@ -386,14 +397,6 @@ public class GameBrain : MonoBehaviour
         }
         return timestamps_str;
     }
-    /*
-    private void ResolveDataConflicts()
-    {
-        int rounds = trials_pool.Count;
-        gameParams.game_settings.trials_to_explode = Mathf.Clamp(gameParams.game_settings.trials_to_explode, 0, rounds - gameParams.game_settings.trials_to_show_key);
-        gameParams.game_settings.trials_to_show_key = Mathf.Clamp(gameParams.game_settings.trials_to_show_key, 0, rounds);
-    }
-    */
 }
 
 public class TrialType
@@ -415,7 +418,7 @@ public class GameSettings
     public List<float> allowed_error_from_target_ratio;
 }
 
-public class GameParams
+public class game_params
 {
     public List<TrialType> trial_types;
     public GameSettings game_settings;
