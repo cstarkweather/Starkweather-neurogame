@@ -46,6 +46,8 @@ public class GameBrain : MonoBehaviour
     private Transform chestParent;
     private int[] bombs;
     private int[] chests;
+    private List<GameObject> bombsLit = new List<GameObject>();
+    private List<GameObject> chestsLit = new List<GameObject>();
 
     [SerializeField]
     private UIController ui;
@@ -240,24 +242,28 @@ public class GameBrain : MonoBehaviour
         for (int i = 0; i < chestParent.childCount; i++)
             GameObject.Destroy(chestParent.GetChild(i).gameObject);
 
-        // spawn assets
+        // spawn assets        
         bombs = FillRandomly(currentTrialType.bombs, currentTrialType.bombs_lit);
         chests = FillRandomly(currentTrialType.chests, currentTrialType.chests_lit);
+        bombsLit = new List<GameObject>();
+        chestsLit = new List<GameObject>();
 
-        float x_offset = 1.3f;
+        float x_offset = 1.4f;
         float y_rot = 20f;
         for (int i=0; i < bombs.Length; i++)
         {
             GameObject b = (bombs[i] == 0) ? Instantiate(bombUnlit, bombParent) : Instantiate(bombLit, bombParent);
-            b.transform.localPosition = new Vector3((i % 2 == 0) ? x_offset : -x_offset, Mathf.FloorToInt(i/2) * 0.75f, 0);
+            b.transform.localPosition = new Vector3((i % 2 == 0) ? x_offset : -x_offset, Mathf.FloorToInt(i / 2) + 0.45f, 0);
+            if (bombs[i] == 1) bombsLit.Add(b);
         }
-
+        x_offset = 1.3f;
         for (int i = 0; i < chests.Length; i++)
         {
             GameObject b = (chests[i] == 0) ? Instantiate(chestUnlit, chestParent) : Instantiate(chestLit, chestParent);
             x_offset = (i == 2 || i == 3) ? 1f : 0.75f;
             b.transform.localPosition = new Vector3((i % 2 == 0) ? x_offset : -x_offset, Mathf.FloorToInt(i / 2) * 0.75f, 0);
             b.transform.Rotate(new Vector3(0, (i % 2 == 0) ? y_rot : -y_rot, 0));
+            if (chests[i] == 1) chestsLit.Add(b);
         }
 
         // Poisson for black screen
@@ -289,7 +295,7 @@ public class GameBrain : MonoBehaviour
 
     public void CheckBombs()
     {
-        if (errorChance < Random.value)
+        if (errorChance < Random.value && bombsLit.Count > 0)
         {
             Debug.Log("Boom!");
             animatorCam.Play("CameraExplode", 0, 0f);
@@ -297,6 +303,11 @@ public class GameBrain : MonoBehaviour
             crystals -= crystals_shift;
             ui.setCrystals(crystals);
             ui.setInfo(crystals_shift + " CRYSTALS LOST");
+            foreach (GameObject bomb in bombsLit)
+            {
+                foreach(ParticleSystem ps in bomb.GetComponentsInChildren<ParticleSystem>())
+                    ps.Play();
+            }
         }
     }
 
@@ -311,6 +322,11 @@ public class GameBrain : MonoBehaviour
             crystals += crystals_shift;
             ui.setCrystals(crystals);
             ui.setInfo(crystals_shift + " CRYSTALS EARNED");
+            foreach(GameObject chest in chestsLit)
+            {
+                chest.GetComponent<Animator>().SetTrigger("open");
+                chest.GetComponent<ParticleSystem>().Play();
+            }
         }
     }
 
