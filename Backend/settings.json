@@ -7,7 +7,7 @@
   ],
   "game_settings":{
     "number_of_trials_per_trial_type": 2,
-	"number_of_groups" : 4,
+	"number_of_groups" : 2,
     "reward_for_chest": 10,
     "cost_for_bomb_explosion": 20,
     "trials_to_explode": 2,
