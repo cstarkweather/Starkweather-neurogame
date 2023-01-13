@@ -411,6 +411,7 @@ public class TrialType
 public class GameSettings
 {
     public int number_of_trials_per_trial_type;
+    public int number_of_groups;
     public int reward_for_chest;
     public int cost_for_bomb_explosion;
     public int trials_to_explode;
