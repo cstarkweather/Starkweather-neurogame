@@ -61,11 +61,14 @@ public class GameBrain : MonoBehaviour
     private string game_id;
     private float roundStartTime = 0;
     public float[] timestamps = new float[6];
-    private List<int> trials_pool = new List<int>();
+    private List<TrialType> trials_pool = new List<TrialType>();
     
     public int trials_where_player_went_forward = 0;
     public int trials_that_exploded_so_far = 0;
     public int trials_that_rewarded_so_far = 0;
+    float explosion_avg_chance = 0;
+    float key_avg_chance = 0;
+    int trials_count = 0;
 
     void Start()
     {
@@ -92,6 +95,11 @@ public class GameBrain : MonoBehaviour
                 game_params = JsonConvert.DeserializeObject<game_params>(json);
                 connected = true;
                 Time.timeScale = 1;
+
+                trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
+                explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)trials_count;
+                key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
+
                 NewGame();
             }
             else
@@ -205,21 +213,41 @@ public class GameBrain : MonoBehaviour
         System.DateTime date = System.DateTime.Now;
         game_id = user_id + date.ToString("_yyyy-MM-dd_HH-mm", System.Globalization.CultureInfo.InvariantCulture);
 
-        // fill trials pool
-        foreach(TrialType trial in game_params.trial_types)
-        {
-            for (int i = 0; i < game_params.game_settings.number_of_trials_per_trial_type; i++)
-            {
-                trials_pool.Add(trial.id);
-            }
-        }
-
-        // shuffle trials_pool
-        trials_pool = Shuffle(trials_pool, 15);
+        FillTrialsPool();
 
         // start 1st round
         current_trial = -1;
         NewRound();
+    }
+
+    private void FillTrialsPool()
+    {
+        trials_pool = new List<TrialType>();
+        List<TrialType>[] groups = new List<TrialType>[game_params.game_settings.number_of_groups];
+        for (int i = 0; i < groups.Length; i++)
+            groups[i] = new List<TrialType>();
+
+        for (int i=0; i < game_params.game_settings.number_of_trials_per_trial_type / groups.Length; i++)
+        {
+            for (int j = 0; j < groups.Length; j++)
+            {
+                groups[j].AddRange(game_params.trial_types);
+            }
+        }
+
+        int rest = game_params.game_settings.number_of_trials_per_trial_type % groups.Length;
+        List<TrialType> pool_rest = new List<TrialType>();
+        for (int i = 1; i < rest; i++)
+            pool_rest.AddRange(game_params.trial_types);
+        pool_rest = Shuffle(pool_rest);
+
+        // add pool_rest to the next group
+        for(int i=0; i< pool_rest.Count; i++)
+            groups[i % groups.Length].Add(pool_rest[i]);
+
+        // shuffle each group and add to the pool
+        for (int i = 0; i < groups.Length; i++)
+            trials_pool.AddRange(Shuffle(groups[i]));
     }
 
     private void NewRound()
@@ -228,7 +256,7 @@ public class GameBrain : MonoBehaviour
         current_trial++;
 
         // get current trial type
-        current_trial_type = GetTrialType(current_trial);
+        current_trial_type = trials_pool[current_trial];
 
         // clear assets
         for (int i = 0; i < bombParent.childCount; i++)
@@ -275,21 +303,9 @@ public class GameBrain : MonoBehaviour
         timestamps = new float[6];
     }
 
-    private TrialType GetTrialType(int i)
-    {
-        int trial_type = trials_pool[i];
-
-        foreach (TrialType t in game_params.trial_types)
-            if(t.id == trial_type)
-                return t;
-
-        // if nothing match get the first one
-        return game_params.trial_types[0];
-    }
-
     public void CheckBombs()
     {
-        if (PlayEvent(trials_that_exploded_so_far))
+        if (PlayEvent(explosion_avg_chance, trials_that_exploded_so_far))
         {
             //Debug.Log("Boom!");
             trials_that_exploded_so_far += 1;
@@ -309,7 +325,7 @@ public class GameBrain : MonoBehaviour
     public void CheckChests()
     {
         keyBoxAnim.SetTrigger("open");
-        if (PlayEvent(trials_that_rewarded_so_far))
+        if (PlayEvent(key_avg_chance, trials_that_rewarded_so_far))
         {
             //Debug.Log("Key!");
             trials_that_rewarded_so_far += 1;
@@ -326,12 +342,11 @@ public class GameBrain : MonoBehaviour
         }
     }
 
-    public bool PlayEvent(float trials_that_played_so_far)
-    {
-        float trials_to_explode_ratio = (float)game_params.game_settings.trials_to_explode / (float)trials_pool.Count;
-        float a = Mathf.Abs((trials_that_played_so_far + 1) / ((float)trials_where_player_went_forward) - trials_to_explode_ratio);
-        float b = Mathf.Abs((trials_that_played_so_far) / ((float)trials_where_player_went_forward) - trials_to_explode_ratio);
-        float t = ((float)current_trial) / ((float)trials_pool.Count - 1);
+    public bool PlayEvent(float event_avg_chance, float events_that_played_so_far)
+    {        
+        float a = Mathf.Abs((events_that_played_so_far + 1) / ((float)trials_where_player_went_forward) - event_avg_chance);
+        float b = Mathf.Abs((events_that_played_so_far) / ((float)trials_where_player_went_forward) - event_avg_chance);
+        float t = ((float)current_trial) / ((float)trials_count - 1);
         float epsilon = Mathf.Lerp(game_params.game_settings.allowed_error_from_target_ratio[0], game_params.game_settings.allowed_error_from_target_ratio[1], t);
         //Debug.Log("x: " + a.ToString() + " y: " + b.ToString() + " t: " + t + " epsilon: " + epsilon.ToString());
 
@@ -339,11 +354,6 @@ public class GameBrain : MonoBehaviour
             return Random.value > 0.5f;
         else
             return a < b;
-    }
-
-    public void SaveTimestamp(int i)
-    {
-        timestamps[i] = Time.time - roundStartTime;
     }
 
     private int[] FillRandomly(int size, int fill)
@@ -356,10 +366,11 @@ public class GameBrain : MonoBehaviour
         return list;
     }
 
-    private List<int> Shuffle(List<int> list, int times)
+    private List<TrialType> Shuffle(List<TrialType> list)
     {
-        int tmp, swapWith;
-        for (int j = 0; j < times; j++)
+        TrialType tmp;
+        int swapWith;
+        for (int j = 0; j < 5; j++)
         {
             for (int i = 0; i < list.Count; i++)
             {
@@ -385,6 +396,11 @@ public class GameBrain : MonoBehaviour
             randPoisson++;
         }
         return randPoisson / (float)lambda;
+    }
+
+    public void SaveTimestamp(int i)
+    {
+        timestamps[i] = Time.time - roundStartTime;
     }
 
     private string TimestampsAsString()
