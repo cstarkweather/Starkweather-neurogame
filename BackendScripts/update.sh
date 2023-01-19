@@ -3,6 +3,7 @@ set -eu
 
 cd neuropace-behavioral-fps
 git pull --rebase
-chmod -R a+rX ~/public_html/
-chmod a+rwX ~/public_html/logs/
-chmod a+rwX ~/public_html/settings.json
+chmod -R a+rx ~/public_html/
+chmod a+rw- ~/public_html/settings.json
+chmod a+rwx ~/public_html/logs/
+
