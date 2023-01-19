@@ -64,3 +64,4 @@ crashlytics-build.properties
 
 # This Project related
 Backend/logs/*.txt
+Backend/settings.json
