@@ -66,9 +66,9 @@ public class GameBrain : MonoBehaviour
     public int trials_where_player_went_forward = 0;
     public int trials_that_exploded_so_far = 0;
     public int trials_that_rewarded_so_far = 0;
-    float explosion_avg_chance = 0;
-    float key_avg_chance = 0;
-    int trials_count = 0;
+    private float explosion_avg_chance = 0;
+    private float key_avg_chance = 0;
+    private int trials_count = 0;
 
     void Start()
     {
@@ -237,7 +237,7 @@ public class GameBrain : MonoBehaviour
 
         int rest = game_params.game_settings.number_of_trials_per_trial_type % groups.Length;
         List<TrialType> pool_rest = new List<TrialType>();
-        for (int i = 1; i < rest; i++)
+        for (int i = 1; i < rest+1; i++)
             pool_rest.AddRange(game_params.trial_types);
         pool_rest = Shuffle(pool_rest);
 
