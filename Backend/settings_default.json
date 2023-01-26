@@ -8,8 +8,8 @@
   "game_settings":{
     "number_of_trials_per_trial_type": 2,
 	"number_of_groups" : 2,
-    "reward_for_chest": 10,
-    "cost_for_bomb_explosion": 20,
+    "reward_for_chest": 1,
+    "cost_for_bomb_explosion": 2,
     "trials_to_explode": 2,
     "trials_to_show_key": 2,
 	"allowed_error_from_target_ratio":[0.0005,0.5]
