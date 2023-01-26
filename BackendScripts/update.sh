@@ -2,6 +2,7 @@
 set -eu
 
 cd neuropace-behavioral-fps
+git checkout *
 git pull --rebase
 
 if [ '!' -f ~/public_html/settings.json ]; then
