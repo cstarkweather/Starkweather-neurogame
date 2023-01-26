@@ -34,6 +34,10 @@ public class GameBrain : MonoBehaviour
     private GameObject chestUnlit;
     [SerializeField]
     private GameObject key;
+    [SerializeField]
+    private GameObject RubyEarned;
+    [SerializeField]
+    private GameObject RubyLost;
 
     // animated key box
     [SerializeField]
@@ -44,6 +48,8 @@ public class GameBrain : MonoBehaviour
     private Transform bombParent;
     [SerializeField]
     private Transform chestParent;
+    [SerializeField]
+    private Transform rubiesUIParent;
     private int[] bombs;
     private int[] chests;
     private List<GameObject> bombsAll = new List<GameObject>();
@@ -54,7 +60,7 @@ public class GameBrain : MonoBehaviour
 
     public string jsonUrl;
     public string saveUrl;
-    public string json;    
+    public string json_str;    
     public bool connected = false;
 
     private string user_id = "DefaultUser";
@@ -72,43 +78,65 @@ public class GameBrain : MonoBehaviour
 
     void Start()
     {
+        //Application.targetFrameRate = 15; // only for fps influence test
+        string mode = "local"; // "web" or "local"
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         string gameUrl = Application.absoluteURL;
+        mode = "web";
         if (Application.absoluteURL.IndexOf("=") > 0)
             user_id = Application.absoluteURL.Split('=')[1];
 #endif
+
         Time.timeScale = 0;
-        //Application.targetFrameRate = 15; // only for fps influence test
         animatorCam = GetComponent<Animator>();
-        StartCoroutine(GetSettings());
+        StartCoroutine(InitializeGame(mode));
     }
 
-    private IEnumerator GetSettings() {
-        using (UnityWebRequest www = UnityWebRequest.Get(jsonUrl))
+    private IEnumerator InitializeGame(string mode) {
+
+        if (mode == "web")
         {
-            yield return www.SendWebRequest();
-
-            if (www.result == UnityWebRequest.Result.Success)
+            using (UnityWebRequest www = UnityWebRequest.Get(jsonUrl))
             {
-                json = www.downloadHandler.text;
-                game_params = JsonConvert.DeserializeObject<game_params>(json);
-                connected = true;
-                Time.timeScale = 1;
+                yield return www.SendWebRequest();
 
-                trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
-                explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)trials_count;
-                key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
-
-                NewGame();
-            }
-            else
-            {
-                Debug.Log(www.error);
-                ui.setEndScreen("Connection error.\r\nRetrying to connect...");
-                StartCoroutine(GetSettings());
+                if (www.result == UnityWebRequest.Result.Success)
+                {
+                    json_str = www.downloadHandler.text;
+                }
+                else
+                {
+                    Debug.Log(www.error);
+                    ui.setEndScreen("Connection error.\r\nRetrying to connect...");
+                    StartCoroutine(InitializeGame(mode));
+                    yield break;
+                }
             }
         }
+        else if(mode == "local")
+        {
+            TextAsset json = (TextAsset)Resources.Load("game_settings");
+            json_str = json.text;
+        }
+        else
+        {
+            ui.setEndScreen("Error. Undefined mode.");
+        }
+
+        game_params = JsonConvert.DeserializeObject<game_params>(json_str);
+        // count trialas where 0 bombs lit
+        int trials_where_zero_bombs_lit = 0;
+        foreach(TrialType trial in game_params.trial_types)
+        {
+            if (trial.bombs_lit == 0)
+                trials_where_zero_bombs_lit += 1;
+        }
+        trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
+        explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / ((float)trials_count - trials_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type);
+        key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
+        Time.timeScale = 1;
+        NewGame();
     }
 
     private IEnumerator SendTimestamps(int trial_index, string log)
@@ -133,7 +161,7 @@ public class GameBrain : MonoBehaviour
 
     void Update()
     {
-        if (!connected)
+        if (game_params==null)
             return;
 
         AnimatorStateInfo animStateInf = animatorCam.GetCurrentAnimatorStateInfo(0);
@@ -171,6 +199,7 @@ public class GameBrain : MonoBehaviour
                 // last trial
                 animatorCam.SetFloat("mul", 0);
                 ui.setEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing\r\n\r\n" + TimestampsAsString() + "\r\n\r\n(debug: 'R' for replay)");
+                ClearAssets();
             }
             else
             {
@@ -259,10 +288,7 @@ public class GameBrain : MonoBehaviour
         current_trial_type = trials_pool[current_trial];
 
         // clear assets
-        for (int i = 0; i < bombParent.childCount; i++)
-            GameObject.Destroy(bombParent.GetChild(i).gameObject);
-        for (int i = 0; i < chestParent.childCount; i++)
-            GameObject.Destroy(chestParent.GetChild(i).gameObject);
+        ClearAssets();
 
         // spawn assets        
         bombs = FillRandomly(current_trial_type.bombs, current_trial_type.bombs_lit);
@@ -305,7 +331,7 @@ public class GameBrain : MonoBehaviour
 
     public void CheckBombs()
     {
-        if (PlayEvent(explosion_avg_chance, trials_that_exploded_so_far))
+        if (current_trial_type.bombs_lit != 0 && PlayEvent(explosion_avg_chance, trials_that_exploded_so_far))
         {
             //Debug.Log("Boom!");
             trials_that_exploded_so_far += 1;
@@ -313,12 +339,14 @@ public class GameBrain : MonoBehaviour
             int crystals_shift = current_trial_type.bombs_lit * game_params.game_settings.cost_for_bomb_explosion;
             crystals -= crystals_shift;
             ui.setCrystals(crystals);
-            ui.setInfo(crystals_shift + " CRYSTALS LOST");
+            ui.setInfo(crystals_shift + " RUBIES LOST");
             foreach (GameObject bomb in bombsAll)
             {
                 foreach(ParticleSystem ps in bomb.GetComponentsInChildren<ParticleSystem>())
                     ps.Play();
             }
+            for (int i = 0; i < Mathf.Abs(crystals_shift); i++)
+                Instantiate(RubyLost, rubiesUIParent);
         }
     }
 
@@ -333,13 +361,25 @@ public class GameBrain : MonoBehaviour
             int crystals_shift = current_trial_type.chests_lit * game_params.game_settings.reward_for_chest;
             crystals += crystals_shift;
             ui.setCrystals(crystals);
-            ui.setInfo(crystals_shift + " CRYSTALS EARNED");
+            ui.setInfo(crystals_shift + " RUBIES EARNED");
             foreach(GameObject chest in chestsLit)
             {
                 chest.GetComponent<Animator>().SetTrigger("open");
                 chest.GetComponent<ParticleSystem>().Play();
             }
+            for(int i=0; i< crystals_shift; i++)
+                Instantiate(RubyEarned, rubiesUIParent);
         }
+    }
+
+    public void ClearAssets()
+    {
+        for (int i = 0; i < bombParent.childCount; i++)
+            GameObject.Destroy(bombParent.GetChild(i).gameObject);
+        for (int i = 0; i < chestParent.childCount; i++)
+            GameObject.Destroy(chestParent.GetChild(i).gameObject);
+        for (int i = 0; i < rubiesUIParent.childCount; i++)
+            GameObject.Destroy(rubiesUIParent.GetChild(i).gameObject);
     }
 
     public bool PlayEvent(float event_avg_chance, float events_that_played_so_far)

@@ -17,12 +17,12 @@ public class UIController : MonoBehaviour
     private GameObject endScreenUI;
 
     public void setCrystals(int amount) { 
-        crystalsUI.text = "crystals: " + amount.ToString();
+        crystalsUI.text = "<sprite index=0>rubies: " + amount.ToString();
     }
 
     public void setRounds(int round)
     {
-        roundsUI.text = "round: " + round.ToString();
+        roundsUI.text = round.ToString();
     }
 
     public void setInfo(string message)
@@ -32,6 +32,7 @@ public class UIController : MonoBehaviour
 
     public void setDescription(string message)
     {
+        descriptionUI.transform.parent.gameObject.SetActive(message != "");
         descriptionUI.text = message;
     }
     public void setEndScreen(string message)
