@@ -5,23 +5,17 @@ using System.Linq;
 using UnityEngine.SceneManagement;
 using UnityEngine.Networking;
 using Newtonsoft.Json;
+using System.IO;
 
 public class GameBrain : MonoBehaviour
 {
     private Animator animatorCam;
-    private game_params game_params;
+    private GameParams game_params;
     private int crystals = 0;
 
     [SerializeField]
     private int current_trial = 0;
     TrialType current_trial_type;
-
-    private bool is_trial_started = false;
-
-    [SerializeField]
-    private int[] fireBombs; // per round: (true / false)
-    [SerializeField]
-    private int[] showKey; // per round: (true / false)
 
     // assets prefabs
     [SerializeField]
@@ -38,6 +32,8 @@ public class GameBrain : MonoBehaviour
     private GameObject RubyEarned;
     [SerializeField]
     private GameObject RubyLost;
+    [SerializeField]
+    private GameObject FadeBlack;
 
     // animated key box
     [SerializeField]
@@ -54,14 +50,16 @@ public class GameBrain : MonoBehaviour
     private int[] chests;
     private List<GameObject> bombsAll = new List<GameObject>();
     private List<GameObject> chestsLit = new List<GameObject>();
+    
 
     [SerializeField]
     private UIController ui;
 
     public string jsonUrl;
     public string saveUrl;
-    public string json_str;    
-    public bool connected = false;
+    public string json_str = "";    
+    public bool is_connected = false;
+    private bool is_game_finished = false;
 
     private string user_id = "DefaultUser";
     private string game_id;
@@ -83,99 +81,62 @@ public class GameBrain : MonoBehaviour
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         string gameUrl = Application.absoluteURL;
-        mode = "web";
         if (Application.absoluteURL.IndexOf("=") > 0)
             user_id = Application.absoluteURL.Split('=')[1];
+        mode = "web";
 #endif
 
-        Time.timeScale = 0;
+        FadeBlack.SetActive(true);
         animatorCam = GetComponent<Animator>();
-        StartCoroutine(InitializeGame(mode));
-    }
-
-    private IEnumerator InitializeGame(string mode) {
 
         if (mode == "web")
         {
-            using (UnityWebRequest www = UnityWebRequest.Get(jsonUrl))
-            {
-                yield return www.SendWebRequest();
-
-                if (www.result == UnityWebRequest.Result.Success)
-                {
-                    json_str = www.downloadHandler.text;
-                }
-                else
-                {
-                    Debug.Log(www.error);
-                    ui.setEndScreen("Connection error.\r\nRetrying to connect...");
-                    StartCoroutine(InitializeGame(mode));
-                    yield break;
-                }
-            }
+            StartCoroutine(GetJSONFromURL());
         }
-        else if(mode == "local")
+        else if (mode == "local")
         {
-            TextAsset json = (TextAsset)Resources.Load("game_settings");
-            json_str = json.text;
+            string game_settings_path = Directory.GetParent(Application.dataPath) + "/game_settings.json";
+            if (File.Exists(game_settings_path))
+                json_str = File.ReadAllText(game_settings_path);
+            else
+                ui.printEndScreen("No \"game_settings.json\" file in game directory.");
         }
         else
         {
-            ui.setEndScreen("Error. Undefined mode.");
-        }
-
-        game_params = JsonConvert.DeserializeObject<game_params>(json_str);
-        // count trialas where 0 bombs lit
-        int trials_where_zero_bombs_lit = 0;
-        foreach(TrialType trial in game_params.trial_types)
-        {
-            if (trial.bombs_lit == 0)
-                trials_where_zero_bombs_lit += 1;
-        }
-        trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
-        explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / ((float)trials_count - trials_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type);
-        key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
-        Time.timeScale = 1;
-        NewGame();
-    }
-
-    private IEnumerator SendTimestamps(int trial_index, string log)
-    {
-        WWWForm form = new WWWForm();
-        form.AddField("id", game_id);
-        form.AddField("log", log);
-        form.AddField("t", trial_index);        
-
-        using (UnityWebRequest www = UnityWebRequest.Post(saveUrl, form))
-        {
-            yield return www.SendWebRequest();
-
-            if (www.result != UnityWebRequest.Result.Success)
-            {
-                Debug.Log(www.error);
-                ui.setEndScreen("Connection error");
-                StartCoroutine(SendTimestamps(trial_index, log));
-            }
+            ui.printEndScreen("Error. Undefined mode.");
         }
     }
 
     void Update()
     {
-        if (game_params==null)
+        if (Input.GetKeyDown(KeyCode.Escape))
+            Application.Quit();
+
+        if (is_game_finished) {
+            if (Input.GetKeyDown(KeyCode.R))
+                SceneManager.LoadScene(0);
             return;
+        }
+
+        if (json_str == "")
+            return;
+
+        if (game_params == null)
+            InitializeGame();
 
         AnimatorStateInfo animStateInf = animatorCam.GetCurrentAnimatorStateInfo(0);
 
         // timestamps (NOTE: timestamp[2] is writing on KeyDown)
         if (timestamps[0] == 0 && animStateInf.IsName("CameraEntryWalk"))
         {
+            FadeBlack.SetActive(false);
+            animatorCam.SetFloat("mul", 1);
             SaveTimestamp(0);
-            is_trial_started = true;
         }
         else if (timestamps[1] == 0 && animStateInf.IsName("CameraWaiting"))
         {
             SaveTimestamp(1);
-            ui.setDescription("Waiting for action");
+            ui.printDescription("Waiting for action");
         }
         else if (timestamps[3] == 0 && animStateInf.IsName("CameraBraveWalk") && animStateInf.normalizedTime >= 0.5f)
         {
@@ -187,23 +148,24 @@ public class GameBrain : MonoBehaviour
             SaveTimestamp(4);
             CheckChests();
         }
-        else if (timestamps[5] == 0 && animStateInf.IsName("CameraBlack") && is_trial_started)
-        {
+        else if (timestamps[0] != 0 && animStateInf.IsName("CameraBlack"))
+        {            
             SaveTimestamp(5);
-            //Debug.Log("timestapms: " + TimestampsAsString());
             StartCoroutine(SendTimestamps(current_trial, TimestampsAsString()));
-            is_trial_started = false;
+            FadeBlack.SetActive(true);
+            animatorCam.SetFloat("mul", PoissonRandom(20));
 
-            if (current_trial == trials_pool.Count - 1)
+            if (current_trial+1 < trials_pool.Count)
             {
-                // last trial
-                animatorCam.SetFloat("mul", 0);
-                ui.setEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing\r\n\r\n" + TimestampsAsString() + "\r\n\r\n(debug: 'R' for replay)");
-                ClearAssets();
+                NewRound();
             }
             else
             {
-                NewRound();
+                // last trial
+                animatorCam.SetFloat("mul", 0);
+                ui.printEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing\r\n\r\n" + TimestampsAsString() + "\r\n\r\n(debug: 'R' for replay)");
+                ClearAssets();
+                is_game_finished = true;
             }
         }
 
@@ -215,7 +177,7 @@ public class GameBrain : MonoBehaviour
                 // try
                 SaveTimestamp(2);
                 animatorCam.SetTrigger("try");
-                ui.setDescription("");
+                ui.printDescription("");
                 trials_where_player_went_forward += 1;
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow))
@@ -223,71 +185,51 @@ public class GameBrain : MonoBehaviour
                 // escape
                 SaveTimestamp(2);
                 animatorCam.Play("CameraBlack", 0, 0f);
-                ui.setDescription("");
+                ui.printDescription("");
             }
         }
-
-        // for debug
-        if (Input.GetKeyDown(KeyCode.R))
-            SceneManager.LoadScene(0);
+       
     }
 
-    private void NewGame()
+    private void InitializeGame()
     {
-        Debug.Log("New Game");
-        crystals = 0;
-        ui.setCrystals(0);
+        game_params = JsonConvert.DeserializeObject<GameParams>(json_str);
+        // count trialas where 0 bombs lit
+        int trials_where_zero_bombs_lit = 0;
+        foreach (TrialType trial in game_params.trial_types)
+        {
+            if (trial.bombs_lit == 0)
+                trials_where_zero_bombs_lit += 1;
+        }
+        trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
+        explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)(trials_count - (trials_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type));
+        key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
+        FillTrialsPool();
+
+        Debug.Log("Params Loaded");
+        ui.printCrystals(crystals);
 
         // game_id based on date and time
         System.DateTime date = System.DateTime.Now;
         game_id = user_id + date.ToString("_yyyy-MM-dd_HH-mm", System.Globalization.CultureInfo.InvariantCulture);
-
-        FillTrialsPool();
 
         // start 1st round
         current_trial = -1;
         NewRound();
     }
 
-    private void FillTrialsPool()
-    {
-        trials_pool = new List<TrialType>();
-        List<TrialType>[] groups = new List<TrialType>[game_params.game_settings.number_of_groups];
-        for (int i = 0; i < groups.Length; i++)
-            groups[i] = new List<TrialType>();
-
-        for (int i=0; i < game_params.game_settings.number_of_trials_per_trial_type / groups.Length; i++)
-        {
-            for (int j = 0; j < groups.Length; j++)
-            {
-                groups[j].AddRange(game_params.trial_types);
-            }
-        }
-
-        int rest = game_params.game_settings.number_of_trials_per_trial_type % groups.Length;
-        List<TrialType> pool_rest = new List<TrialType>();
-        for (int i = 1; i < rest+1; i++)
-            pool_rest.AddRange(game_params.trial_types);
-        pool_rest = Shuffle(pool_rest);
-
-        // add pool_rest to the next group
-        for(int i=0; i< pool_rest.Count; i++)
-            groups[i % groups.Length].Add(pool_rest[i]);
-
-        // shuffle each group and add to the pool
-        for (int i = 0; i < groups.Length; i++)
-            trials_pool.AddRange(Shuffle(groups[i]));
-    }
-
     private void NewRound()
     {
         // update round index
         current_trial++;
-
-        // get current trial type
         current_trial_type = trials_pool[current_trial];
+        ui.printRounds(current_trial + 1);        
 
-        // clear assets
+        // clear activities, messages and assets
+        ui.printInfo("");
+        ui.printDescription("");
+        ui.printEndScreen("");
+        key.SetActive(false);
         ClearAssets();
 
         // spawn assets        
@@ -314,16 +256,6 @@ public class GameBrain : MonoBehaviour
             if (chests[i] == 1) chestsLit.Add(b);
         }
 
-        // Poisson for black screen
-        animatorCam.SetFloat("mul", PoissonRandom(20));
-
-        // clear activities and messages
-        ui.setRounds(current_trial + 1);
-        ui.setInfo("");
-        ui.setDescription("");
-        ui.setEndScreen("");
-        key.SetActive(false);
-
         // reset timer
         roundStartTime = Time.time;
         timestamps = new float[6];
@@ -338,8 +270,8 @@ public class GameBrain : MonoBehaviour
             animatorCam.Play("CameraExplode", 0, 0f);
             int crystals_shift = current_trial_type.bombs_lit * game_params.game_settings.cost_for_bomb_explosion;
             crystals -= crystals_shift;
-            ui.setCrystals(crystals);
-            ui.setInfo(crystals_shift + " RUBIES LOST");
+            ui.printCrystals(crystals);
+            ui.printInfo(crystals_shift + " RUBIES LOST");
             foreach (GameObject bomb in bombsAll)
             {
                 foreach(ParticleSystem ps in bomb.GetComponentsInChildren<ParticleSystem>())
@@ -360,8 +292,8 @@ public class GameBrain : MonoBehaviour
             key.SetActive(true);
             int crystals_shift = current_trial_type.chests_lit * game_params.game_settings.reward_for_chest;
             crystals += crystals_shift;
-            ui.setCrystals(crystals);
-            ui.setInfo(crystals_shift + " RUBIES EARNED");
+            ui.printCrystals(crystals);
+            ui.printInfo(crystals_shift + " RUBIES EARNED");
             foreach(GameObject chest in chestsLit)
             {
                 chest.GetComponent<Animator>().SetTrigger("open");
@@ -394,6 +326,36 @@ public class GameBrain : MonoBehaviour
             return Random.value > 0.5f;
         else
             return a < b;
+    }
+
+    private void FillTrialsPool()
+    {
+        trials_pool = new List<TrialType>();
+        List<TrialType>[] groups = new List<TrialType>[game_params.game_settings.number_of_groups];
+        for (int i = 0; i < groups.Length; i++)
+            groups[i] = new List<TrialType>();
+
+        for (int i = 0; i < game_params.game_settings.number_of_trials_per_trial_type / groups.Length; i++)
+        {
+            for (int j = 0; j < groups.Length; j++)
+            {
+                groups[j].AddRange(game_params.trial_types);
+            }
+        }
+
+        int rest = game_params.game_settings.number_of_trials_per_trial_type % groups.Length;
+        List<TrialType> pool_rest = new List<TrialType>();
+        for (int i = 1; i < rest + 1; i++)
+            pool_rest.AddRange(game_params.trial_types);
+        pool_rest = Shuffle(pool_rest);
+
+        // add pool_rest to the next group
+        for (int i = 0; i < pool_rest.Count; i++)
+            groups[i % groups.Length].Add(pool_rest[i]);
+
+        // shuffle each group and add to the pool
+        for (int i = 0; i < groups.Length; i++)
+            trials_pool.AddRange(Shuffle(groups[i]));
     }
 
     private int[] FillRandomly(int size, int fill)
@@ -443,6 +405,26 @@ public class GameBrain : MonoBehaviour
         timestamps[i] = Time.time - roundStartTime;
     }
 
+    private IEnumerator SendTimestamps(int trial_index, string log)
+    {
+        WWWForm form = new WWWForm();
+        form.AddField("id", game_id);
+        form.AddField("log", log);
+        form.AddField("t", trial_index);
+
+        using (UnityWebRequest www = UnityWebRequest.Post(saveUrl, form))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result != UnityWebRequest.Result.Success)
+            {
+                Debug.Log(www.error);
+                ui.printEndScreen("Connection error");
+                StartCoroutine(SendTimestamps(trial_index, log));
+            }
+        }
+    }
+
     private string TimestampsAsString()
     {
         string timestamps_str = "";
@@ -453,6 +435,30 @@ public class GameBrain : MonoBehaviour
         }
         return timestamps_str;
     }
+
+    IEnumerator GetJSONFromURL()
+    {
+        using (UnityWebRequest webRequest = UnityWebRequest.Get(jsonUrl))
+        {
+            // Request and wait for the desired page.
+            yield return webRequest.SendWebRequest();
+
+            switch (webRequest.result)
+            {
+                case UnityWebRequest.Result.ConnectionError:
+                case UnityWebRequest.Result.DataProcessingError:
+                    Debug.LogError("Error: " + webRequest.error);
+                    break;
+                case UnityWebRequest.Result.ProtocolError:
+                    Debug.LogError("HTTP Error: " + webRequest.error);
+                    break;
+                case UnityWebRequest.Result.Success:
+                    json_str = webRequest.downloadHandler.text;
+                    break;
+            }
+        }
+    }
+
 }
 
 public class TrialType
@@ -475,7 +481,7 @@ public class GameSettings
     public List<float> allowed_error_from_target_ratio;
 }
 
-public class game_params
+public class GameParams
 {
     public List<TrialType> trial_types;
     public GameSettings game_settings;

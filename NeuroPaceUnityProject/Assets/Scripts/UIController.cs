@@ -16,26 +16,26 @@ public class UIController : MonoBehaviour
     [SerializeField]
     private GameObject endScreenUI;
 
-    public void setCrystals(int amount) { 
+    public void printCrystals(int amount) { 
         crystalsUI.text = "<sprite index=0>rubies: " + amount.ToString();
     }
 
-    public void setRounds(int round)
+    public void printRounds(int round)
     {
         roundsUI.text = round.ToString();
     }
 
-    public void setInfo(string message)
+    public void printInfo(string message)
     {
         infoUI.text = message;
     }
 
-    public void setDescription(string message)
+    public void printDescription(string message)
     {
         descriptionUI.transform.parent.gameObject.SetActive(message != "");
         descriptionUI.text = message;
     }
-    public void setEndScreen(string message)
+    public void printEndScreen(string message)
     {
         if (message == "")
             endScreenUI.SetActive(false);
