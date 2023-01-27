@@ -57,8 +57,7 @@ public class GameBrain : MonoBehaviour
 
     public string jsonUrl;
     public string saveUrl;
-    public string json_str = "";    
-    public bool is_connected = false;
+    public string json_str = "";
     private bool is_game_finished = false;
 
     private string user_id = "DefaultUser";
@@ -88,18 +87,20 @@ public class GameBrain : MonoBehaviour
 
         FadeBlack.SetActive(true);
         animatorCam = GetComponent<Animator>();
+        animatorCam.SetFloat("mul", 0);
 
         if (mode == "web")
         {
+            Debug.Log("Load JSON from URL");
             StartCoroutine(GetJSONFromURL());
         }
         else if (mode == "local")
         {
             string game_settings_path = Directory.GetParent(Application.dataPath) + "/game_settings.json";
-            if (File.Exists(game_settings_path))
+            if (File.Exists(game_settings_path)) {
                 json_str = File.ReadAllText(game_settings_path);
-            else
-                ui.printEndScreen("No \"game_settings.json\" file in game directory.");
+            }
+            else { ui.printEndScreen("No \"game_settings.json\" file in game directory."); }
         }
         else
         {
@@ -118,7 +119,7 @@ public class GameBrain : MonoBehaviour
             return;
         }
 
-        if (json_str == "")
+        if (json_str=="")
             return;
 
         if (game_params == null)
@@ -169,7 +170,7 @@ public class GameBrain : MonoBehaviour
             }
         }
 
-        // time to player action
+        // if time to player action
         if (animStateInf.IsName("CameraWaiting"))
         {
             if (Input.GetKeyDown(KeyCode.UpArrow))
@@ -194,11 +195,15 @@ public class GameBrain : MonoBehaviour
     private void InitializeGame()
     {
         game_params = JsonConvert.DeserializeObject<GameParams>(json_str);
-        // count trialas where 0 bombs lit
+        // parse game_params
         int trials_where_zero_bombs_lit = 0;
-        foreach (TrialType trial in game_params.trial_types)
+        for (int i=0; i<game_params.trial_types.Count; i++)
         {
-            if (trial.bombs_lit == 0)
+            // increase lit assets to all assets if needed
+            game_params.trial_types[i].bombs_lit = Mathf.Min(game_params.trial_types[i].bombs, game_params.trial_types[i].bombs_lit);
+            game_params.trial_types[i].chests_lit = Mathf.Min(game_params.trial_types[i].chests, game_params.trial_types[i].chests_lit);
+            // count trialas where 0 bombs lit
+            if (game_params.trial_types[i].bombs_lit == 0)
                 trials_where_zero_bombs_lit += 1;
         }
         trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
@@ -215,6 +220,8 @@ public class GameBrain : MonoBehaviour
 
         // start 1st round
         current_trial = -1;
+        // start camera
+        animatorCam.SetFloat("mul", 1);
         NewRound();
     }
 
@@ -360,11 +367,12 @@ public class GameBrain : MonoBehaviour
 
     private int[] FillRandomly(int size, int fill)
     {
+        // 5, 5
         fill = Mathf.Min(size, fill);
         int[] list = new int[size];
 
         while (list.Sum() < fill)
-            list[Random.Range(0, size - 1)] = 1;
+            list[Random.Range(0, size)] = 1;
         return list;
     }
 
@@ -438,22 +446,22 @@ public class GameBrain : MonoBehaviour
 
     IEnumerator GetJSONFromURL()
     {
-        using (UnityWebRequest webRequest = UnityWebRequest.Get(jsonUrl))
+        using (UnityWebRequest www = UnityWebRequest.Get(jsonUrl))
         {
             // Request and wait for the desired page.
-            yield return webRequest.SendWebRequest();
+            yield return www.SendWebRequest();
 
-            switch (webRequest.result)
+            switch (www.result)
             {
                 case UnityWebRequest.Result.ConnectionError:
                 case UnityWebRequest.Result.DataProcessingError:
-                    Debug.LogError("Error: " + webRequest.error);
+                    Debug.LogError("Error: " + www.error);
                     break;
                 case UnityWebRequest.Result.ProtocolError:
-                    Debug.LogError("HTTP Error: " + webRequest.error);
+                    Debug.LogError("HTTP Error: " + www.error);
                     break;
                 case UnityWebRequest.Result.Success:
-                    json_str = webRequest.downloadHandler.text;
+                    json_str = www.downloadHandler.text;
                     break;
             }
         }
