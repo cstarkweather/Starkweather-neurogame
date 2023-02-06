@@ -29,6 +29,8 @@ public class GameBrain : MonoBehaviour
     [SerializeField]
     private GameObject key;
     [SerializeField]
+    private GameObject gem;
+    [SerializeField]
     private GameObject RubyEarned;
     [SerializeField]
     private GameObject RubyLost;
@@ -50,7 +52,11 @@ public class GameBrain : MonoBehaviour
     private int[] chests;
     private List<GameObject> bombsAll = new List<GameObject>();
     private List<GameObject> chestsLit = new List<GameObject>();
-    
+    private List<GameObject> gems = new List<GameObject>();
+
+    // audio
+    public AudioSource earnedRubiesSFX;
+    public AudioSource lostRubiesSFX;
 
     [SerializeField]
     private UIController ui;
@@ -244,6 +250,7 @@ public class GameBrain : MonoBehaviour
         chests = FillRandomly(current_trial_type.chests, current_trial_type.chests_lit);
         bombsAll = new List<GameObject>();
         chestsLit = new List<GameObject>();
+        gems = new List<GameObject>();
 
         float x_offset = 1.4f;
         float y_rot = 20f;
@@ -257,10 +264,22 @@ public class GameBrain : MonoBehaviour
         for (int i = 0; i < chests.Length; i++)
         {
             GameObject b = (chests[i] == 0) ? Instantiate(chestUnlit, chestParent) : Instantiate(chestLit, chestParent);
-            x_offset = (i == 2 || i == 3) ? 1f : 0.75f;
+            //x_offset = (i == 2 || i == 3) ? 1f : 0.75f;
+            x_offset = 0.75f;
             b.transform.localPosition = new Vector3((i % 2 == 0) ? x_offset : -x_offset, Mathf.FloorToInt(i / 2) * 0.75f, 0);
             b.transform.Rotate(new Vector3(0, (i % 2 == 0) ? y_rot : -y_rot, 0));
-            if (chests[i] == 1) chestsLit.Add(b);
+            if (chests[i] == 1)
+            {
+                for (int j = 0; j < Mathf.Min(2, game_params.game_settings.reward_for_chest); j++)
+                {
+                    GameObject g = Instantiate(gem, b.transform);
+                    x_offset = (game_params.game_settings.reward_for_chest==1) ? 0.0f : 0.28f;
+                    g.transform.localPosition = g.transform.localPosition + new Vector3((j % 2 == 0) ? x_offset : -x_offset, 0, 0);
+                    g.SetActive(false);
+                    gems.Add(g);
+                    chestsLit.Add(b);
+                }
+            }
         }
 
         // reset timer
@@ -273,6 +292,7 @@ public class GameBrain : MonoBehaviour
         if (current_trial_type.bombs_lit != 0 && PlayEvent(explosion_avg_chance, trials_that_exploded_so_far))
         {
             //Debug.Log("Boom!");
+
             trials_that_exploded_so_far += 1;
             animatorCam.Play("CameraExplode", 0, 0f);
             int crystals_shift = current_trial_type.bombs_lit * game_params.game_settings.cost_for_bomb_explosion;
@@ -286,12 +306,21 @@ public class GameBrain : MonoBehaviour
             }
             for (int i = 0; i < Mathf.Abs(crystals_shift); i++)
                 Instantiate(RubyLost, rubiesUIParent);
+            bombParent.GetComponent<AudioSource>().Play();
+            lostRubiesSFX.Play();
         }
     }
 
     public void CheckChests()
     {
-        keyBoxAnim.SetTrigger("open");
+        //keyBoxAnim.SetTrigger("open");
+        chestParent.GetComponent<AudioSource>().Play();
+        foreach (GameObject chest in chestsLit)
+        {
+            chest.GetComponent<Animator>().SetTrigger("open");
+            //chest.GetComponent<ParticleSystem>().Play();
+        }
+
         if (PlayEvent(key_avg_chance, trials_that_rewarded_so_far))
         {
             //Debug.Log("Key!");
@@ -301,13 +330,11 @@ public class GameBrain : MonoBehaviour
             crystals += crystals_shift;
             ui.printCrystals(crystals);
             ui.printInfo(crystals_shift + " RUBIES EARNED");
-            foreach(GameObject chest in chestsLit)
-            {
-                chest.GetComponent<Animator>().SetTrigger("open");
-                chest.GetComponent<ParticleSystem>().Play();
-            }
-            for(int i=0; i< crystals_shift; i++)
+            foreach (GameObject g in gems)
+                g.SetActive(true);
+            for (int i=0; i< crystals_shift; i++)
                 Instantiate(RubyEarned, rubiesUIParent);
+            earnedRubiesSFX.Play();
         }
     }
 

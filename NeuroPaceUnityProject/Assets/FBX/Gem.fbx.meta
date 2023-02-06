@@ -3,7 +3,12 @@ guid: c7287ee6159f808428b0665848ddb0fd
 ModelImporter:
   serializedVersion: 21300
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Ruby.001
+    second: {fileID: 2100000, guid: cf5df64de364a544398ad5bd207a4801, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
