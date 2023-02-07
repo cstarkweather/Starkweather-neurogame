@@ -118,8 +118,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: a416fcb710f6bf44b91d65bf13ad0d76, type: 3}
   - {fileID: 8300000, guid: 73d83d18c6622c048b905b90ea8f83e0, type: 3}
   randomizeVolume: 1
-  volumeMin: 0.4
-  volumeMax: 0.6
+  volumeMin: 0.1
+  volumeMax: 0.3
   randomizePitch: 1
   pitchMin: 0.9
   pitchMax: 1.1
@@ -138,7 +138,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: -8439489043310341940, guid: 7e09f93c4cd159c40a23d4000f1a3ac4, type: 2}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 1
-  m_Volume: 0.5
+  m_Volume: 0.2
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -166,7 +166,7 @@ AudioSource:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 0.24069977
+      time: 0.33238983
       value: 0
       inSlope: -1.0204082
       outSlope: -1.0204082
@@ -212,7 +212,7 @@ AudioSource:
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 1
+      value: 1.1
       inSlope: 0
       outSlope: 0
       tangentMode: 0

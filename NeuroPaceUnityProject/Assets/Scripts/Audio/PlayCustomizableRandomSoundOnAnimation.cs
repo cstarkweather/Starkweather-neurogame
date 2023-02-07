@@ -12,7 +12,7 @@ public class PlayCustomizableRandomSoundOnAnimation : MonoBehaviour
     public float minVolume = 0.5f;
     public float maxVolume = 1.0f;
 
-    private AudioSource source;
+    public AudioSource source;
 
     private void Start()
     {
@@ -40,3 +40,4 @@ public class PlayCustomizableRandomSoundOnAnimation : MonoBehaviour
         source.PlayOneShot(sounds[randomIndex]);
     }
 }
+
