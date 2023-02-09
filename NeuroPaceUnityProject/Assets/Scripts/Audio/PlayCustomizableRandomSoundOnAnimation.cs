@@ -12,15 +12,33 @@ public class PlayCustomizableRandomSoundOnAnimation : MonoBehaviour
     public float minVolume = 0.5f;
     public float maxVolume = 1.0f;
 
-    public AudioSource source;
+    public AudioSource source1;
+    public AudioSource source2;
+
+    private int assignedSoundIndex = 1;
 
     private void Start()
     {
-        source = GetComponent<AudioSource>();
+        source1 = GetComponent<AudioSource>();
+        source2 = GetComponent<AudioSource>();
     }
 
     public void PlayCustomizableRandomSound()
     {
+        AudioSource source;
+        if (assignedSoundIndex == 1)
+        {
+            source = source1;
+        }
+        else if (assignedSoundIndex == 2)
+        {
+            source = source2;
+        }
+        else
+        {
+            return;
+        }
+
         int randomIndex = Random.Range(0, sounds.Length);
 
         float randomPitch = source.pitch;
@@ -39,5 +57,11 @@ public class PlayCustomizableRandomSoundOnAnimation : MonoBehaviour
         source.volume = randomVolume;
         source.PlayOneShot(sounds[randomIndex]);
     }
+
+    public void SetAssignedSoundIndex(int soundIndex)
+    {
+        assignedSoundIndex = soundIndex;
+    }
 }
+
 
