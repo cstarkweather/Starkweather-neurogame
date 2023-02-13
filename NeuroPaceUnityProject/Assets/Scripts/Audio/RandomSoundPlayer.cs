@@ -55,9 +55,15 @@ public class RandomSoundPlayer : MonoBehaviour
 
     private int GetNextClipIndex()
     {
+        bool fuse = true;
+        foreach (var item in playedClipsIndices) if (item == 0) fuse = false;
+        if (fuse) playedClipsIndices = new int[audioClips.Length];
+
         int randomIndex = Random.Range(0, audioClips.Length);
+
         while (playedClipsIndices[randomIndex] == 1)
         {
+            Debug.Log("loop " + randomIndex.ToString());
             randomIndex = Random.Range(0, audioClips.Length);
         }
         playedClipsIndices[randomIndex] = 1;

@@ -57,6 +57,8 @@ public class GameBrain : MonoBehaviour
     // audio
     public AudioSource earnedRubiesSFX;
     public AudioSource lostRubiesSFX;
+    public AudioSource actionWalk;
+    public AudioSource actionSkip;
 
     [SerializeField]
     private UIController ui;
@@ -186,6 +188,7 @@ public class GameBrain : MonoBehaviour
                 animatorCam.SetTrigger("try");
                 ui.printDescription("");
                 trials_where_player_went_forward += 1;
+                actionWalk.Play();
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow))
             {
@@ -193,6 +196,7 @@ public class GameBrain : MonoBehaviour
                 SaveTimestamp(2);
                 animatorCam.Play("CameraBlack", 0, 0f);
                 ui.printDescription("");
+                actionSkip.Play();
             }
         }
        
@@ -299,11 +303,12 @@ public class GameBrain : MonoBehaviour
             crystals -= crystals_shift;
             ui.printCrystals(crystals);
             ui.printInfo(crystals_shift + " RUBIES LOST");
+            /*
             foreach (GameObject bomb in bombsAll)
             {
                 foreach(ParticleSystem ps in bomb.GetComponentsInChildren<ParticleSystem>())
                     ps.Play();
-            }
+            }*/
             for (int i = 0; i < Mathf.Abs(crystals_shift); i++)
                 Instantiate(RubyLost, rubiesUIParent);
             bombParent.GetComponent<AudioSource>().Play();
