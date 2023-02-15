@@ -68,6 +68,7 @@ public class GameBrain : MonoBehaviour
     public string json_str = "";
     private bool is_game_finished = false;
 
+    private string mode = "local";
     private string user_id = "DefaultUser";
     private string game_id;
     private float roundStartTime = 0;
@@ -84,14 +85,11 @@ public class GameBrain : MonoBehaviour
     void Start()
     {
         //Application.targetFrameRate = 15; // only for fps influence test
-        string mode = "local"; // "web" or "local"
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-        string gameUrl = Application.absoluteURL;
-        if (Application.absoluteURL.IndexOf("=") > 0)
-            user_id = Application.absoluteURL.Split('=')[1];
-        mode = "web";
-#endif
+        // If webgl build switch mode to web
+        #if UNITY_WEBGL && !UNITY_EDITOR
+            mode = "web";
+        #endif
 
         FadeBlack.SetActive(true);
         animatorCam = GetComponent<Animator>();
@@ -99,6 +97,9 @@ public class GameBrain : MonoBehaviour
 
         if (mode == "web")
         {
+            string gameUrl = Application.absoluteURL;
+            if (Application.absoluteURL.IndexOf("=") > 0)
+                user_id = Application.absoluteURL.Split('=')[1];
             Debug.Log("Load JSON from URL");
             StartCoroutine(GetJSONFromURL());
         }
@@ -160,7 +161,9 @@ public class GameBrain : MonoBehaviour
         else if (timestamps[0] != 0 && animStateInf.IsName("CameraBlack"))
         {            
             SaveTimestamp(5);
-            StartCoroutine(SendTimestamps(current_trial, TimestampsAsString()));
+            StartCoroutine(SendTimestamps(current_trial, TimestampsAsString())); // save on host
+            if (mode == "local")
+                SaveTimestamps(game_id, TimestampsAsString()); // save locally
             FadeBlack.SetActive(true);
             animatorCam.SetFloat("mul", PoissonRandom(20));
 
@@ -463,6 +466,13 @@ public class GameBrain : MonoBehaviour
                 StartCoroutine(SendTimestamps(trial_index, log));
             }
         }
+    }
+
+    public static async void SaveTimestamps(string game_id, string line)
+    {
+        string logs_path = Directory.GetParent(Application.dataPath) + "/logs_" + game_id + ".txt";
+        using StreamWriter file = new(logs_path, append: true);
+        await file.WriteLineAsync(line);
     }
 
     private string TimestampsAsString()

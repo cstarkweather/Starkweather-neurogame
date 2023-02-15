@@ -63,7 +63,6 @@ public class RandomSoundPlayer : MonoBehaviour
 
         while (playedClipsIndices[randomIndex] == 1)
         {
-            Debug.Log("loop " + randomIndex.ToString());
             randomIndex = Random.Range(0, audioClips.Length);
         }
         playedClipsIndices[randomIndex] = 1;
