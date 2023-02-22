@@ -177,6 +177,7 @@ public class GameBrain : MonoBehaviour
             {
                 // last trial
                 animatorCam.SetFloat("mul", 0);
+                ui.printInfo("");
                 ui.printEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing \r\n\r\n (debug: 'R' for replay)");
                 ClearAssets();
                 is_game_finished = true;
