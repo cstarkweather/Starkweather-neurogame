@@ -6,16 +6,19 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Networking;
 using Newtonsoft.Json;
 using System.IO;
+using System.Web;
 
 public class GameBrain : MonoBehaviour
 {
     private Animator animatorCam;
     private GameParams game_params;
-    private int crystals = 0;
+    private int crystals = 20;
 
     [SerializeField]
     private int current_trial = 0;
     TrialType current_trial_type;
+    private int decision = -1;
+    private int outcome = 0;
 
     // assets prefabs
     [SerializeField]
@@ -67,8 +70,7 @@ public class GameBrain : MonoBehaviour
     public string saveUrl;
     public string json_str = "";
     private bool is_game_finished = false;
-
-    private string mode = "local";
+    
     private string user_id = "DefaultUser";
     private string game_id;
     private float roundStartTime = 0;
@@ -82,38 +84,37 @@ public class GameBrain : MonoBehaviour
     private float key_avg_chance = 0;
     private int trials_count = 0;
 
+    enum Modes { Local, Web };
+    private Modes mode = Modes.Local;
+
     void Start()
     {
         //Application.targetFrameRate = 15; // only for fps influence test
 
         // If webgl build switch mode to web
-        #if UNITY_WEBGL && !UNITY_EDITOR
-            mode = "web";
-        #endif
+#if UNITY_WEBGL && !UNITY_EDITOR
+            mode = Modes.Web;
+#endif
 
         FadeBlack.SetActive(true);
         animatorCam = GetComponent<Animator>();
         animatorCam.SetFloat("mul", 0);
 
-        if (mode == "web")
+        if (mode == Modes.Web)
         {
-            string gameUrl = Application.absoluteURL;
-            if (Application.absoluteURL.IndexOf("=") > 0)
-                user_id = Application.absoluteURL.Split('=')[1];
-            Debug.Log("Load JSON from URL");
+            System.Uri unparsedUrl = new System.Uri(Application.absoluteURL);
+            if (HttpUtility.ParseQueryString(unparsedUrl.Query).Get("id") is not null)
+                user_id = HttpUtility.ParseQueryString(unparsedUrl.Query).Get("id");
+            Debug.Log("Loading JSON from URL");
             StartCoroutine(GetJSONFromURL());
         }
-        else if (mode == "local")
+        else if (mode == Modes.Local)
         {
             string game_settings_path = Directory.GetParent(Application.dataPath) + "/game_settings.json";
             if (File.Exists(game_settings_path)) {
                 json_str = File.ReadAllText(game_settings_path);
             }
             else { ui.printEndScreen("No \"game_settings.json\" file in game directory."); }
-        }
-        else
-        {
-            ui.printEndScreen("Error. Undefined mode.");
         }
     }
 
@@ -161,9 +162,10 @@ public class GameBrain : MonoBehaviour
         else if (timestamps[0] != 0 && animStateInf.IsName("CameraBlack"))
         {            
             SaveTimestamp(5);
-            StartCoroutine(SendTimestamps(current_trial, TimestampsAsString())); // save on host
-            if (mode == "local")
-                SaveTimestamps(game_id, TimestampsAsString()); // save locally
+            if (mode == Modes.Web)
+                StartCoroutine(SendTimestamps(current_trial, GetLogLine())); // save on host
+            if (mode == Modes.Local)
+                SaveTimestamps(game_id, GetLogLine()); // save locally
             FadeBlack.SetActive(true);
             animatorCam.SetFloat("mul", PoissonRandom(20));
 
@@ -175,7 +177,7 @@ public class GameBrain : MonoBehaviour
             {
                 // last trial
                 animatorCam.SetFloat("mul", 0);
-                ui.printEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing\r\n\r\n" + TimestampsAsString() + "\r\n\r\n(debug: 'R' for replay)");
+                ui.printEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing \r\n\r\n (debug: 'R' for replay)");
                 ClearAssets();
                 is_game_finished = true;
             }
@@ -192,6 +194,7 @@ public class GameBrain : MonoBehaviour
                 ui.printDescription("");
                 trials_where_player_went_forward += 1;
                 actionWalk.Play();
+                decision = 1;
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow))
             {
@@ -200,6 +203,7 @@ public class GameBrain : MonoBehaviour
                 animatorCam.Play("CameraBlack", 0, 0f);
                 ui.printDescription("");
                 actionSkip.Play();
+                decision = 0;
             }
         }
        
@@ -225,7 +229,7 @@ public class GameBrain : MonoBehaviour
         FillTrialsPool();
 
         Debug.Log("Params Loaded");
-        ui.printCrystals(crystals);
+        ui.rubiesTarget = 20;
 
         // game_id based on date and time
         System.DateTime date = System.DateTime.Now;
@@ -241,6 +245,8 @@ public class GameBrain : MonoBehaviour
     private void NewRound()
     {
         // update round index
+        decision = -1;
+        outcome = 0;
         current_trial++;
         current_trial_type = trials_pool[current_trial];
         ui.printRounds(current_trial + 1);        
@@ -302,17 +308,18 @@ public class GameBrain : MonoBehaviour
 
             trials_that_exploded_so_far += 1;
             animatorCam.Play("CameraExplode", 0, 0f);
-            int crystals_shift = current_trial_type.bombs_lit * game_params.game_settings.cost_for_bomb_explosion;
-            crystals -= crystals_shift;
-            ui.printCrystals(crystals);
-            ui.printInfo(crystals_shift + " RUBIES LOST");
+            outcome = -current_trial_type.bombs_lit * game_params.game_settings.cost_for_bomb_explosion;
+            crystals += outcome;
+            ui.rubiesTarget = crystals;
+            string desc = (Mathf.Abs(outcome) == 1) ? " RUBY!" : " RUBIES!";
+            ui.printInfo(outcome + desc);
             /*
             foreach (GameObject bomb in bombsAll)
             {
                 foreach(ParticleSystem ps in bomb.GetComponentsInChildren<ParticleSystem>())
                     ps.Play();
             }*/
-            for (int i = 0; i < Mathf.Abs(crystals_shift); i++)
+            for (int i = 0; i < Mathf.Abs(outcome); i++)
                 Instantiate(RubyLost, rubiesUIParent);
             bombParent.GetComponent<AudioSource>().Play();
             lostRubiesSFX.Play();
@@ -334,13 +341,14 @@ public class GameBrain : MonoBehaviour
             //Debug.Log("Key!");
             trials_that_rewarded_so_far += 1;
             key.SetActive(true);
-            int crystals_shift = current_trial_type.chests_lit * game_params.game_settings.reward_for_chest;
-            crystals += crystals_shift;
-            ui.printCrystals(crystals);
-            ui.printInfo(crystals_shift + " RUBIES EARNED");
+            outcome = current_trial_type.chests_lit * game_params.game_settings.reward_for_chest;
+            crystals += outcome;
+            ui.rubiesTarget = crystals;
+            string desc = (Mathf.Abs(outcome) == 1) ? " RUBY!" : " RUBIES!";
+            ui.printInfo("+" + outcome + desc);
             foreach (GameObject g in gems)
                 g.SetActive(true);
-            for (int i=0; i< crystals_shift; i++)
+            for (int i=0; i< outcome; i++)
                 Instantiate(RubyEarned, rubiesUIParent);
             earnedRubiesSFX.Play();
         }
@@ -475,15 +483,15 @@ public class GameBrain : MonoBehaviour
         await file.WriteLineAsync(line);
     }
 
-    private string TimestampsAsString()
+    private string GetLogLine()
     {
-        string timestamps_str = "";
+        string log_line = System.String.Format("{0} {1} {2} {3}", current_trial, current_trial_type.id, decision, outcome);
         foreach (float t in timestamps)
         {
             int millis = Mathf.RoundToInt(t * 1000);
-            timestamps_str += millis.ToString() + " ";
+            log_line += " " + millis.ToString();
         }
-        return timestamps_str;
+        return log_line;
     }
 
     IEnumerator GetJSONFromURL()

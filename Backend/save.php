@@ -4,7 +4,7 @@
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $game_id = preg_replace('/[^A-Za-z0-9\-\_]/', '', $_POST["id"]);
-    $timestamps = $string = preg_replace('/[^0-9\ ]/', '', $_POST["log"]);
+    $timestamps = $string = preg_replace('/[^0-9\ -]/', '', $_POST["log"]);
     $trial = (int) $_POST["t"];
     
     $file = 'logs' . DIRECTORY_SEPARATOR . $game_id . '.txt';

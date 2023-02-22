@@ -16,8 +16,34 @@ public class UIController : MonoBehaviour
     [SerializeField]
     private GameObject endScreenUI;
 
-    public void printCrystals(int amount) { 
-        crystalsUI.text = "<sprite index=0>rubies: " + amount.ToString();
+    private float rubies = 0;
+    public int rubiesTarget = 20;
+
+    private void Start()
+    {
+        rubies = rubiesTarget;
+        updateCrystalsCounter();
+    }
+
+    private void Update()
+    {
+        if (rubies != rubiesTarget)
+        {
+            crystalsUI.color = new Color(1, 1, 1, 1);
+            crystalsUI.fontSize = 60;
+            float change = Time.deltaTime * 10;
+            rubies = (rubies < rubiesTarget) ? Mathf.Min(rubies + change, rubiesTarget) : Mathf.Max(rubies - change, rubiesTarget);
+            updateCrystalsCounter();
+        }
+        else
+        {
+            crystalsUI.color = new Color(0.75f, 0.75f, 0.75f, 1);
+            crystalsUI.fontSize = 55;
+        }
+    }
+
+    public void updateCrystalsCounter() { 
+        crystalsUI.text = "<sprite index=0>rubies: " + Mathf.RoundToInt(rubies).ToString();
     }
 
     public void printRounds(int round)
