@@ -7,11 +7,13 @@
   ],
   "game_settings":{
     "number_of_trials_per_trial_type": 2,
-	"number_of_groups" : 2,
+    "number_of_groups" : 2,
     "reward_for_chest": 2,
     "cost_for_bomb_explosion": 1,
     "trials_to_explode": 2,
     "trials_to_show_key": 2,
-	"allowed_error_from_target_ratio":[0.0005,0.5]
+    "allowed_error_from_target_ratio":[0.0005,0.5],
+    "rubies_goal": 26,
+    "real_reward": "you are the winner"
   }
 }

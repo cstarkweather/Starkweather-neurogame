@@ -10,15 +10,10 @@ using System.Web;
 
 public class GameBrain : MonoBehaviour
 {
-    private Animator animatorCam;
-    private GameParams game_params;
-    private int crystals = 20;
-
     [SerializeField]
-    private int current_trial = 0;
-    TrialType current_trial_type;
-    private int decision = -1;
-    private int outcome = 0;
+    private Questions questions;
+    [SerializeField]
+    private Tutorial tutorial;
 
     // assets prefabs
     [SerializeField]
@@ -30,8 +25,6 @@ public class GameBrain : MonoBehaviour
     [SerializeField]
     private GameObject chestUnlit;
     [SerializeField]
-    private GameObject key;
-    [SerializeField]
     private GameObject gem;
     [SerializeField]
     private GameObject RubyEarned;
@@ -39,10 +32,6 @@ public class GameBrain : MonoBehaviour
     private GameObject RubyLost;
     [SerializeField]
     private GameObject FadeBlack;
-
-    // animated key box
-    [SerializeField]
-    private Animator keyBoxAnim;
 
     // for assets visualization
     [SerializeField]
@@ -56,6 +45,7 @@ public class GameBrain : MonoBehaviour
     private List<GameObject> bombsAll = new List<GameObject>();
     private List<GameObject> chestsLit = new List<GameObject>();
     private List<GameObject> gems = new List<GameObject>();
+    private Animator animatorCam;
 
     // audio
     public AudioSource earnedRubiesSFX;
@@ -65,24 +55,37 @@ public class GameBrain : MonoBehaviour
 
     [SerializeField]
     private UIController ui;
-
+    [HideInInspector]
+    public string key_try = "UP";
+    [HideInInspector]
+    public string key_skip = "RIGHT";
+    
     public string jsonUrl;
     public string saveUrl;
     public string json_str = "";
-    private bool is_game_finished = false;
+    public bool is_game_started = false;
+    public bool is_game_finished = false;
+    [HideInInspector]
+    public GameParams game_params;
     
-    private string user_id = "DefaultUser";
-    private string game_id;
+    TrialType current_trial_type;
+    private int decision = -1;
+    private int outcome = 0;
+    private int current_trial = 0;
+
+    public string user_id = "DefaultUseer";
+    public string game_id;
     private float roundStartTime = 0;
     public float[] timestamps = new float[6];
     private List<TrialType> trials_pool = new List<TrialType>();
-    
+
+    private int rubies = 20;
+    public int trials_count = 0;
     public int trials_where_player_went_forward = 0;
     public int trials_that_exploded_so_far = 0;
     public int trials_that_rewarded_so_far = 0;
     private float explosion_avg_chance = 0;
     private float key_avg_chance = 0;
-    private int trials_count = 0;
 
     enum Modes { Local, Web };
     private Modes mode = Modes.Local;
@@ -91,11 +94,11 @@ public class GameBrain : MonoBehaviour
     {
         //Application.targetFrameRate = 15; // only for fps influence test
 
-        // If webgl build switch mode to web
 #if UNITY_WEBGL && !UNITY_EDITOR
-            mode = Modes.Web;
+           mode = Modes.Web;
 #endif
 
+        ui.printInfo("");
         FadeBlack.SetActive(true);
         animatorCam = GetComponent<Animator>();
         animatorCam.SetFloat("mul", 0);
@@ -115,7 +118,15 @@ public class GameBrain : MonoBehaviour
                 json_str = File.ReadAllText(game_settings_path);
             }
             else { ui.printEndScreen("No \"game_settings.json\" file in game directory."); }
+            user_id = "Local";
+            key_try = "A";
+            key_skip = "B";
         }
+
+        // set unique game id
+        System.DateTime date = System.DateTime.Now;
+        game_id = user_id + date.ToString("_yyyy-MM-dd_HH-mm-ss", System.Globalization.CultureInfo.InvariantCulture);
+        ui.printInfo("");
     }
 
     void Update()
@@ -129,17 +140,26 @@ public class GameBrain : MonoBehaviour
             return;
         }
 
-        if (json_str=="")
+        if (json_str == "")
             return;
+        else if (game_params == null)
+            ParamsFromJson();
 
-        if (game_params == null)
-            InitializeGame();
+        if (!is_game_started) {
+            is_game_started = (questions.questions_left == 0 && tutorial.tutorials_left == 0);
+            if (!is_game_started) return;
+            else InitializeGame();
+        }
 
         AnimatorStateInfo animStateInf = animatorCam.GetCurrentAnimatorStateInfo(0);
 
         // timestamps (NOTE: timestamp[2] is writing on KeyDown)
         if (timestamps[0] == 0 && animStateInf.IsName("CameraEntryWalk"))
         {
+            // enable fuses sounds
+            foreach (GameObject bomb in bombsAll)
+                foreach (AudioSource audio in bomb.GetComponentsInChildren<AudioSource>())
+                    audio.mute = false;
             FadeBlack.SetActive(false);
             animatorCam.SetFloat("mul", 1);
             SaveTimestamp(0);
@@ -162,10 +182,7 @@ public class GameBrain : MonoBehaviour
         else if (timestamps[0] != 0 && animStateInf.IsName("CameraBlack"))
         {            
             SaveTimestamp(5);
-            if (mode == Modes.Web)
-                StartCoroutine(SendTimestamps(current_trial, GetLogLine())); // save on host
-            if (mode == Modes.Local)
-                SaveTimestamps(game_id, GetLogLine()); // save locally
+            SaveLogLine(game_id, TrialLogLine(), current_trial+1);
             FadeBlack.SetActive(true);
             animatorCam.SetFloat("mul", PoissonRandom(20));
 
@@ -178,7 +195,7 @@ public class GameBrain : MonoBehaviour
                 // last trial
                 animatorCam.SetFloat("mul", 0);
                 ui.printInfo("");
-                ui.printEndScreen("Your final result is \r\n" + crystals + " CRYSTALS\r\nThanks for playing \r\n\r\n (debug: 'R' for replay)");
+                ui.printEndScreen("Your final result is \r\n" + rubies + " RUBIES\r\nThanks for playing \r\n\r\n (debug: 'R' for replay)");
                 ClearAssets();
                 is_game_finished = true;
             }
@@ -196,6 +213,8 @@ public class GameBrain : MonoBehaviour
                 trials_where_player_went_forward += 1;
                 actionWalk.Play();
                 decision = 1;
+
+                //ScreenCapture.CaptureScreenshot("SomeLevel.png", 2);
             }
             else if (Input.GetKeyDown(KeyCode.RightArrow))
             {
@@ -210,12 +229,12 @@ public class GameBrain : MonoBehaviour
        
     }
 
-    private void InitializeGame()
+    private void ParamsFromJson()
     {
         game_params = JsonConvert.DeserializeObject<GameParams>(json_str);
         // parse game_params
         int trials_where_zero_bombs_lit = 0;
-        for (int i=0; i<game_params.trial_types.Count; i++)
+        for (int i = 0; i < game_params.trial_types.Count; i++)
         {
             // increase lit assets to all assets if needed
             game_params.trial_types[i].bombs_lit = Mathf.Min(game_params.trial_types[i].bombs, game_params.trial_types[i].bombs_lit);
@@ -227,20 +246,18 @@ public class GameBrain : MonoBehaviour
         trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
         explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)(trials_count - (trials_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type));
         key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
-        FillTrialsPool();
-
         Debug.Log("Params Loaded");
-        ui.rubiesTarget = 20;
+    }
 
-        // game_id based on date and time
-        System.DateTime date = System.DateTime.Now;
-        game_id = user_id + date.ToString("_yyyy-MM-dd_HH-mm", System.Globalization.CultureInfo.InvariantCulture);
-
+    private void InitializeGame()
+    {
+        FillTrialsPool();
+        ui.rubiesTarget = rubies;
         // start 1st round
         current_trial = -1;
         // start camera
         animatorCam.SetFloat("mul", 1);
-        NewRound();
+        NewRound();        
     }
 
     private void NewRound()
@@ -256,7 +273,6 @@ public class GameBrain : MonoBehaviour
         ui.printInfo("");
         ui.printDescription("");
         ui.printEndScreen("");
-        key.SetActive(false);
         ClearAssets();
 
         // spawn assets        
@@ -310,8 +326,8 @@ public class GameBrain : MonoBehaviour
             trials_that_exploded_so_far += 1;
             animatorCam.Play("CameraExplode", 0, 0f);
             outcome = -current_trial_type.bombs_lit * game_params.game_settings.cost_for_bomb_explosion;
-            crystals += outcome;
-            ui.rubiesTarget = crystals;
+            rubies += outcome;
+            ui.rubiesTarget = rubies;
             string desc = (Mathf.Abs(outcome) == 1) ? " RUBY!" : " RUBIES!";
             ui.printInfo(outcome + desc);
             /*
@@ -339,12 +355,11 @@ public class GameBrain : MonoBehaviour
 
         if (PlayEvent(key_avg_chance, trials_that_rewarded_so_far))
         {
-            //Debug.Log("Key!");
+            //Debug.Log("Rubies!");
             trials_that_rewarded_so_far += 1;
-            key.SetActive(true);
             outcome = current_trial_type.chests_lit * game_params.game_settings.reward_for_chest;
-            crystals += outcome;
-            ui.rubiesTarget = crystals;
+            rubies += outcome;
+            ui.rubiesTarget = rubies;
             string desc = (Mathf.Abs(outcome) == 1) ? " RUBY!" : " RUBIES!";
             ui.printInfo("+" + outcome + desc);
             foreach (GameObject g in gems)
@@ -457,12 +472,38 @@ public class GameBrain : MonoBehaviour
         timestamps[i] = Time.time - roundStartTime;
     }
 
-    private IEnumerator SendTimestamps(int trial_index, string log)
+    private string TrialLogLine()
+    {
+        string log_line = System.String.Format("{0} {1} {2} {3}", current_trial, current_trial_type.id, decision, outcome);
+        foreach (float t in timestamps)
+        {
+            int millis = Mathf.RoundToInt(t * 1000);
+            log_line += " " + millis.ToString();
+        }
+        return log_line;
+    }
+
+    public void SaveLogLine(string game_id, string line, int row_index)
+    {
+        if (mode == Modes.Local)
+            SaveLogLineLocal(game_id, line);
+        else if (mode == Modes.Web)
+            StartCoroutine(SaveLogLineWeb(game_id, line, row_index));
+    }
+
+    public static async void SaveLogLineLocal(string game_id, string line)
+    {
+        string logs_path = Directory.GetParent(Application.dataPath) + "/logs_" + game_id + ".txt";
+        using StreamWriter file = new(logs_path, append: true);
+        await file.WriteLineAsync(line);
+    }
+
+    private IEnumerator SaveLogLineWeb(string game_id, string log, int row_index)
     {
         WWWForm form = new WWWForm();
         form.AddField("id", game_id);
         form.AddField("log", log);
-        form.AddField("t", trial_index);
+        form.AddField("t", row_index);
 
         using (UnityWebRequest www = UnityWebRequest.Post(saveUrl, form))
         {
@@ -472,27 +513,9 @@ public class GameBrain : MonoBehaviour
             {
                 Debug.Log(www.error);
                 ui.printEndScreen("Connection error");
-                StartCoroutine(SendTimestamps(trial_index, log));
+                StartCoroutine(SaveLogLineWeb(game_id, log, row_index));
             }
         }
-    }
-
-    public static async void SaveTimestamps(string game_id, string line)
-    {
-        string logs_path = Directory.GetParent(Application.dataPath) + "/logs_" + game_id + ".txt";
-        using StreamWriter file = new(logs_path, append: true);
-        await file.WriteLineAsync(line);
-    }
-
-    private string GetLogLine()
-    {
-        string log_line = System.String.Format("{0} {1} {2} {3}", current_trial, current_trial_type.id, decision, outcome);
-        foreach (float t in timestamps)
-        {
-            int millis = Mathf.RoundToInt(t * 1000);
-            log_line += " " + millis.ToString();
-        }
-        return log_line;
     }
 
     IEnumerator GetJSONFromURL()
@@ -538,6 +561,8 @@ public class GameSettings
     public int trials_to_explode;
     public int trials_to_show_key;
     public List<float> allowed_error_from_target_ratio;
+    public int rubies_goal;
+    public string real_reward;
 }
 
 public class GameParams
