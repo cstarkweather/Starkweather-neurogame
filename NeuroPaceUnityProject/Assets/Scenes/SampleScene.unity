@@ -521,19 +521,17 @@ MonoBehaviour:
       m_Calls: []
   m_text: '
 
-    
 
-    If the bombs explode, you will advance to the next trial
-    without reaching the treasure chests.
+    If the bombs explode, you will advance to the next trial without
+    reaching the treasure chests.
 
-    
 
-    The bombs have a 50% chance
-    of ALL exploding. If there are 3 lit bombs, there is a 50% chance that ALL THREE
-    will explode, and 50% chance that NONE of them will explode.
+    The bombs have a 50% chance of ALL exploding.
+    If there are 3 lit bombs, there is a 50% chance that ALL THREE will explode,
+    and 50% chance that NONE of them will explode.
 
-    The number
-    of lit bombs = the number of rubies that could get subtracted, if they explode
+    The number of lit bombs =
+    the number of rubies that could get subtracted, if they explode
 
     Example:
     If 3 bombs explode, 3 rubies get subtracted from your account'
@@ -917,13 +915,11 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Every trial starts at the beginning of a hallway
 
-    
 
-    "{KeyToTry}"
-    to choose to advance down the hallway
+    "{KeyToTry}" to
+    choose to advance down the hallway
 
-    "{KeyToSkip}" to skip to the next
-    hallway'
+    "{KeyToSkip}" to skip to the next hallway'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -6370,8 +6366,8 @@ MonoBehaviour:
     You
     will complete {trialsCount} trials.
 
-    If you earn more than {rubiesGoal}
-    rubies, then {realReward}.'
+    If you earn more than {rubiesGoal} rubies,
+    then {realReward}.'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -7554,12 +7550,10 @@ MonoBehaviour:
       m_Calls: []
   m_text: '
 
-    
 
-    The glowing treasure chests have a 50% chance of containing
-    rubies. The number of glowing treasure chests indicates the number of rubies.
+    The glowing treasure chests have a 50% chance of containing rubies.
+    The number of glowing treasure chests indicates the number of rubies.
 
-    
 
     Example:
     3 glowing treasure chests means that there is a 50% chance that you will earn

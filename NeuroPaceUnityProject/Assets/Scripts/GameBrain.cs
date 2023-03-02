@@ -244,9 +244,36 @@ public class GameBrain : MonoBehaviour
                 trials_where_zero_bombs_lit += 1;
         }
         trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
+        //explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)(trials_count - (trials_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type));
+        //key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
         explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)(trials_count - (trials_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type));
         key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
         Debug.Log("Params Loaded");
+
+        string output = "";
+        output += $"\nexplosion_avg_chance: {explosion_avg_chance}, key_avg_chance: {key_avg_chance}";
+        output += $"\nall: {trials_count}, to explode: {game_params.game_settings.trials_to_explode}, to reward: {game_params.game_settings.trials_to_show_key}";
+        for (int i = 0; i < 5; i++)
+            output += "\n" + DebugChances();
+        Debug.Log(output);
+            
+    }
+
+    private string DebugChances()
+    {
+        FillTrialsPool();        
+        int exploded = 0;
+        int rewarded = 0;
+        for(int i=0; i<trials_count; i++)
+        {
+            TrialType this_trial = trials_pool[i];
+            if (this_trial.bombs_lit != 0 && PlayEvent(explosion_avg_chance, i, exploded)) exploded += 1;
+            else if (PlayEvent(key_avg_chance, i, rewarded))
+            {
+                rewarded += 1;
+            }
+        }
+        return $"DEBUG: trials: {trials_count}, exploded: {exploded}, rewarded: {rewarded}";
     }
 
     private void InitializeGame()
@@ -319,7 +346,7 @@ public class GameBrain : MonoBehaviour
 
     public void CheckBombs()
     {
-        if (current_trial_type.bombs_lit != 0 && PlayEvent(explosion_avg_chance, trials_that_exploded_so_far))
+        if (current_trial_type.bombs_lit != 0 && PlayEvent(explosion_avg_chance, trials_where_player_went_forward, trials_that_exploded_so_far))
         {
             //Debug.Log("Boom!");
 
@@ -353,7 +380,7 @@ public class GameBrain : MonoBehaviour
             //chest.GetComponent<ParticleSystem>().Play();
         }
 
-        if (PlayEvent(key_avg_chance, trials_that_rewarded_so_far))
+        if (PlayEvent(key_avg_chance, trials_where_player_went_forward, trials_that_rewarded_so_far))
         {
             //Debug.Log("Rubies!");
             trials_that_rewarded_so_far += 1;
@@ -380,10 +407,10 @@ public class GameBrain : MonoBehaviour
             GameObject.Destroy(rubiesUIParent.GetChild(i).gameObject);
     }
 
-    public bool PlayEvent(float event_avg_chance, float events_that_played_so_far)
+    public bool PlayEvent(float event_avg_chance, float trials_where_player_went_forward, float events_that_played_so_far)
     {        
         float a = Mathf.Abs((events_that_played_so_far + 1) / ((float)trials_where_player_went_forward) - event_avg_chance);
-        float b = Mathf.Abs((events_that_played_so_far) / ((float)trials_where_player_went_forward) - event_avg_chance);
+        float b = Mathf.Abs((events_that_played_so_far    ) / ((float)trials_where_player_went_forward) - event_avg_chance);
         float t = ((float)current_trial) / ((float)trials_count - 1);
         float epsilon = Mathf.Lerp(game_params.game_settings.allowed_error_from_target_ratio[0], game_params.game_settings.allowed_error_from_target_ratio[1], t);
         //Debug.Log("x: " + a.ToString() + " y: " + b.ToString() + " t: " + t + " epsilon: " + epsilon.ToString());
