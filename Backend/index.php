@@ -11,7 +11,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $json_str = file_get_contents('settings_default.json');
     }
     else{
-        $json_str = preg_replace('/[^A-Za-z0-9\-\_\{\}\[\]\,\"\'\!\?\:\.\ \t\r\n]/', '', $_POST["jconf"]);
+        $json_str = preg_replace('/[^A-Za-z0-9\-\_\{\}\[\]\,\"\'\!\?\%\$\(\)\:\.\ \t\r\n]/', '', $_POST["jconf"]);
     }
 
     $json = json_decode($json_str);
