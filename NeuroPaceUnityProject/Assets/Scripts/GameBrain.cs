@@ -82,9 +82,9 @@ public class GameBrain : MonoBehaviour
 
     private int rubies = 20;
     public int trials_count = 0;
-    public int trials_where_player_went_forward = 0;
-    public int trials_that_exploded_so_far = 0;
-    public int trials_that_rewarded_so_far = 0;
+    public int trials_performed = 0;
+    public int explosions_performed = 0;
+    public int keys_performed = 0;
     private float explosion_avg_chance = 0;
     private float key_avg_chance = 0;
 
@@ -214,10 +214,10 @@ public class GameBrain : MonoBehaviour
                 SaveTimestamp(2);
                 animatorCam.SetTrigger("try");
                 ui.printDescription("");
-                trials_where_player_went_forward += 1;
+                trials_performed += 1;
                 actionWalk.Play();
                 decision = 1;
-                //ScreenCapture.CaptureScreenshot("SomeLevel.png", 2);
+                ScreenCapture.CaptureScreenshot("SomeLevel2.png", 2);
             }
             else if (Keyboard.current.rightArrowKey.isPressed || (Gamepad.current != null && Gamepad.current.bButton.isPressed))
             {
@@ -247,19 +247,17 @@ public class GameBrain : MonoBehaviour
                 trials_where_zero_bombs_lit += 1;
         }
         trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
-        //explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)(trials_count - (trials_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type));
-        //key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
-        explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)(trials_count - (trials_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type));
+        explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)(trials_count);
         key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
         Debug.Log("Params Loaded");
-
+        /*
         string output = "";
         output += $"\nexplosion_avg_chance: {explosion_avg_chance}, key_avg_chance: {key_avg_chance}";
         output += $"\nall: {trials_count}, to explode: {game_params.game_settings.trials_to_explode}, to reward: {game_params.game_settings.trials_to_show_key}";
         for (int i = 0; i < 5; i++)
             output += "\n" + DebugChances();
         Debug.Log(output);
-            
+        */
     }
 
     private string DebugChances()
@@ -269,12 +267,12 @@ public class GameBrain : MonoBehaviour
         int rewarded = 0;
         for(int i=0; i<trials_count; i++)
         {
+            float phase = (float)i / (trials_count - 1);
             TrialType this_trial = trials_pool[i];
-            if (this_trial.bombs_lit != 0 && PlayEvent(explosion_avg_chance, i, exploded)) exploded += 1;
-            else if (PlayEvent(key_avg_chance, i, rewarded))
-            {
+            if (this_trial.bombs_lit != 0 && PlayEvent2(phase, explosion_avg_chance, i, exploded, game_params.game_settings.trials_to_explode))
+                exploded += 1;
+            else if (PlayEvent2(phase, key_avg_chance, i, rewarded, game_params.game_settings.trials_to_show_key))
                 rewarded += 1;
-            }
         }
         return $"DEBUG: trials: {trials_count}, exploded: {exploded}, rewarded: {rewarded}";
     }
@@ -287,7 +285,7 @@ public class GameBrain : MonoBehaviour
         current_trial = -1;
         // start camera
         animatorCam.SetFloat("mul", 1);
-        NewRound();        
+        NewRound();
     }
 
     private void NewRound()
@@ -349,23 +347,18 @@ public class GameBrain : MonoBehaviour
 
     public void CheckBombs()
     {
-        if (current_trial_type.bombs_lit != 0 && PlayEvent(explosion_avg_chance, trials_where_player_went_forward, trials_that_exploded_so_far))
+        float phase = (float)current_trial / (trials_count - 1);
+        if (current_trial_type.bombs_lit != 0 && PlayEvent2(phase, explosion_avg_chance, trials_performed, explosions_performed, game_params.game_settings.trials_to_explode))
         {
             //Debug.Log("Boom!");
-
-            trials_that_exploded_so_far += 1;
+            explosions_performed += 1;
             animatorCam.Play("CameraExplode", 0, 0f);
             outcome = -current_trial_type.bombs_lit * game_params.game_settings.cost_for_bomb_explosion;
             rubies += outcome;
             ui.rubiesTarget = rubies;
             string desc = (Mathf.Abs(outcome) == 1) ? " RUBY!" : " RUBIES!";
             ui.printInfo(outcome + desc);
-            /*
-            foreach (GameObject bomb in bombsAll)
-            {
-                foreach(ParticleSystem ps in bomb.GetComponentsInChildren<ParticleSystem>())
-                    ps.Play();
-            }*/
+
             for (int i = 0; i < Mathf.Abs(outcome); i++)
                 Instantiate(RubyLost, rubiesUIParent);
             bombParent.GetComponent<AudioSource>().Play();
@@ -380,13 +373,13 @@ public class GameBrain : MonoBehaviour
         foreach (GameObject chest in chestsLit)
         {
             chest.GetComponent<Animator>().SetTrigger("open");
-            //chest.GetComponent<ParticleSystem>().Play();
         }
 
-        if (PlayEvent(key_avg_chance, trials_where_player_went_forward, trials_that_rewarded_so_far))
+        float phase = (float)current_trial / (trials_count - 1);
+        if (PlayEvent2(phase, key_avg_chance, trials_performed, keys_performed, game_params.game_settings.trials_to_show_key))
         {
             //Debug.Log("Rubies!");
-            trials_that_rewarded_so_far += 1;
+            keys_performed += 1;
             outcome = current_trial_type.chests_lit * game_params.game_settings.reward_for_chest;
             rubies += outcome;
             ui.rubiesTarget = rubies;
@@ -410,18 +403,19 @@ public class GameBrain : MonoBehaviour
             GameObject.Destroy(rubiesUIParent.GetChild(i).gameObject);
     }
 
-    public bool PlayEvent(float event_avg_chance, float trials_where_player_went_forward, float events_that_played_so_far)
-    {        
-        float a = Mathf.Abs((events_that_played_so_far + 1) / ((float)trials_where_player_went_forward) - event_avg_chance);
-        float b = Mathf.Abs((events_that_played_so_far    ) / ((float)trials_where_player_went_forward) - event_avg_chance);
-        float t = ((float)current_trial) / ((float)trials_count - 1);
-        float epsilon = Mathf.Lerp(game_params.game_settings.allowed_error_from_target_ratio[0], game_params.game_settings.allowed_error_from_target_ratio[1], t);
-        //Debug.Log("x: " + a.ToString() + " y: " + b.ToString() + " t: " + t + " epsilon: " + epsilon.ToString());
+    public bool PlayEvent2(float phase, float event_avg_chance, int trials_performed, int events_performed, int events_expected) 
+    {
+        //Debug.Log($"{phase} {event_avg_chance} {trials_performed} {events_performed} {events_expected}");
+        float interpolated_chance = event_avg_chance;
+        float designed_events_count = phase * events_expected;
+        float ratio = designed_events_count / (events_performed + 1);
 
-        if (Mathf.Abs(a - b) > epsilon)
-            return Random.value > 0.5f;
-        else
-            return a < b;
+        if (ratio > 1)
+            interpolated_chance = Mathf.Lerp(event_avg_chance, 1 - game_params.game_settings.minimum_error, ratio);
+        else if (ratio < 1)
+            interpolated_chance = Mathf.Lerp(event_avg_chance, game_params.game_settings.minimum_error, 1 - ratio);
+
+        return (Random.value < interpolated_chance);
     }
 
     private void FillTrialsPool()
@@ -590,9 +584,11 @@ public class GameSettings
     public int cost_for_bomb_explosion;
     public int trials_to_explode;
     public int trials_to_show_key;
-    public List<float> allowed_error_from_target_ratio;
-    public int rubies_goal;
-    public string real_reward;
+    public float minimum_error;
+    public int time_for_decision;
+    public int cost_for_no_decision;
+    public string goal_description;
+    public string reward_description;
 }
 
 public class GameParams
