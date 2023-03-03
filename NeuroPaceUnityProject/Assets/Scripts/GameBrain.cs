@@ -7,6 +7,7 @@ using UnityEngine.Networking;
 using Newtonsoft.Json;
 using System.IO;
 using System.Web;
+using UnityEngine.InputSystem;
 
 public class GameBrain : MonoBehaviour
 {
@@ -119,8 +120,11 @@ public class GameBrain : MonoBehaviour
             }
             else { ui.printEndScreen("No \"game_settings.json\" file in game directory."); }
             user_id = "Local";
-            key_try = "A";
-            key_skip = "B";
+            if (Gamepad.current != null)
+            {
+                key_try = "A";
+                key_skip = "B";
+            }
         }
 
         // set unique game id
@@ -204,7 +208,7 @@ public class GameBrain : MonoBehaviour
         // if time to player action
         if (animStateInf.IsName("CameraWaiting"))
         {
-            if (Input.GetKeyDown(KeyCode.UpArrow))
+            if (Keyboard.current.upArrowKey.isPressed || (Gamepad.current != null && Gamepad.current.aButton.isPressed))
             {
                 // try
                 SaveTimestamp(2);
@@ -213,10 +217,9 @@ public class GameBrain : MonoBehaviour
                 trials_where_player_went_forward += 1;
                 actionWalk.Play();
                 decision = 1;
-
                 //ScreenCapture.CaptureScreenshot("SomeLevel.png", 2);
             }
-            else if (Input.GetKeyDown(KeyCode.RightArrow))
+            else if (Keyboard.current.rightArrowKey.isPressed || (Gamepad.current != null && Gamepad.current.bButton.isPressed))
             {
                 // escape
                 SaveTimestamp(2);
