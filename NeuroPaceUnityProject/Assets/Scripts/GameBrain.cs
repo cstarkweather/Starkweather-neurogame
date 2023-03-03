@@ -236,7 +236,7 @@ public class GameBrain : MonoBehaviour
     {
         game_params = JsonConvert.DeserializeObject<GameParams>(json_str);
         // parse game_params
-        int trials_where_zero_bombs_lit = 0;
+        int trial_types_where_zero_bombs_lit = 0;
         for (int i = 0; i < game_params.trial_types.Count; i++)
         {
             // increase lit assets to all assets if needed
@@ -244,11 +244,15 @@ public class GameBrain : MonoBehaviour
             game_params.trial_types[i].chests_lit = Mathf.Min(game_params.trial_types[i].chests, game_params.trial_types[i].chests_lit);
             // count trialas where 0 bombs lit
             if (game_params.trial_types[i].bombs_lit == 0)
-                trials_where_zero_bombs_lit += 1;
+                trial_types_where_zero_bombs_lit += 1;
         }
         trials_count = game_params.trial_types.Count * game_params.game_settings.number_of_trials_per_trial_type;
-        explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)(trials_count);
-        key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
+        explosion_avg_chance = 0;
+        key_avg_chance = 0;
+        if (trials_count - trial_types_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type != 0)
+            explosion_avg_chance = (float)game_params.game_settings.trials_to_explode / (float)(trials_count - trial_types_where_zero_bombs_lit * game_params.game_settings.number_of_trials_per_trial_type);
+        if (trials_count - game_params.game_settings.trials_to_explode != 0)
+            key_avg_chance = (float)game_params.game_settings.trials_to_show_key / (float)(trials_count - game_params.game_settings.trials_to_explode);
         Debug.Log("Params Loaded");
         /*
         string output = "";
