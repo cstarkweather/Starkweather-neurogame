@@ -275,16 +275,19 @@ public class GameBrain : MonoBehaviour
 
     private string DebugChances()
     {
-        FillTrialsPool();        
+        FillTrialsPool();
+        int skip = 50;
         int exploded = 0;
-        int rewarded = 0;
-        for(int i=0; i<trials_count; i++)
+        int rewarded = 0;        
+        int performed = 0;
+        for (int i=0; i<trials_count; i++)
         {
-            float phase = (float)i / (trials_count - 1);
+            if (i < skip) continue;
+            performed += 1;
             TrialType this_trial = trials_pool[i];
-            if (this_trial.bombs_lit != 0 && PlayEvent2(phase, explosion_avg_chance, i, exploded, game_params.game_settings.trials_to_explode))
+            if (this_trial.bombs_lit != 0 && PlayEvent(trials_count, i, performed, exploded, game_params.game_settings.trials_to_explode, explosion_avg_chance))
                 exploded += 1;
-            else if (PlayEvent2(phase, key_avg_chance, i, rewarded, game_params.game_settings.trials_to_show_key))
+            else if (PlayEvent(trials_count, i, performed, rewarded, game_params.game_settings.trials_to_show_key, key_avg_chance))
                 rewarded += 1;
         }
         return $"DEBUG: trials: {trials_count}, exploded: {exploded}, rewarded: {rewarded}";
@@ -361,8 +364,7 @@ public class GameBrain : MonoBehaviour
 
     public void CheckBombs()
     {
-        float phase = (float)current_trial / (trials_count - 1);
-        if (current_trial_type.bombs_lit != 0 && PlayEvent2(phase, explosion_avg_chance, trials_performed, explosions_performed, game_params.game_settings.trials_to_explode))
+        if (current_trial_type.bombs_lit != 0 && PlayEvent(trials_count, current_trial, trials_performed, explosions_performed, game_params.game_settings.trials_to_explode, explosion_avg_chance))
         {
             //Debug.Log("Boom!");
             explosions_performed += 1;
@@ -389,8 +391,7 @@ public class GameBrain : MonoBehaviour
             chest.GetComponent<Animator>().SetTrigger("open");
         }
 
-        float phase = (float)current_trial / (trials_count - 1);
-        if (PlayEvent2(phase, key_avg_chance, trials_performed, keys_performed, game_params.game_settings.trials_to_show_key))
+        if (PlayEvent(trials_count, current_trial, trials_performed, keys_performed, game_params.game_settings.trials_to_show_key, key_avg_chance))
         {
             //Debug.Log("Rubies!");
             keys_performed += 1;
@@ -417,11 +418,12 @@ public class GameBrain : MonoBehaviour
             GameObject.Destroy(rubiesUIParent.GetChild(i).gameObject);
     }
 
-    public bool PlayEvent2(float phase, float event_avg_chance, int trials_performed, int events_performed, int events_expected) 
+    public bool PlayEvent(float trials, int trial, int trials_performed, int events_performed, int events_expected, float event_avg_chance) 
     {
         //Debug.Log($"{phase} {event_avg_chance} {trials_performed} {events_performed} {events_expected}");
+        int trials_skipped = trial - trials_performed;
         float interpolated_chance = event_avg_chance;
-        float designed_events_count = phase * events_expected;
+        float designed_events_count = ((float)(trial - trials_skipped + 1) / trials) * events_expected;
         float ratio = designed_events_count / (events_performed + 1);
 
         if (ratio > 1)
