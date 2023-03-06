@@ -43,7 +43,7 @@ public class UIController : MonoBehaviour
     }
 
     public void updateCrystalsCounter() { 
-        crystalsUI.text = "<sprite index=0>rubies: " + Mathf.RoundToInt(rubies).ToString();
+        crystalsUI.text = "<sprite index=4>rubies: " + Mathf.RoundToInt(rubies).ToString();
     }
 
     public void printRounds(int round)
