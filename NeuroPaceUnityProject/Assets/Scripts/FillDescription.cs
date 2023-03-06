@@ -24,8 +24,6 @@ public class FillDescription : MonoBehaviour
             string parsedText = textField.text;
             parsedText = parsedText.Replace("{trialsCount}", $"{gb.trials_count}");
             parsedText = parsedText.Replace("{goalDescription}", $"{gb.game_params.game_settings.goal_description}");
-            parsedText = parsedText.Replace("{KeyToSkip}", $"{gb.key_skip}");
-            parsedText = parsedText.Replace("{KeyToTry}", $"{gb.key_try}");
             textField.text = parsedText;
             filled = true;
         }

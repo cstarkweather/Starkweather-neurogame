@@ -12,7 +12,7 @@ using UnityEngine.InputSystem;
 public class GameBrain : MonoBehaviour
 {
     [SerializeField]
-    private Questions questions;
+    private GameObject questions;
     [SerializeField]
     private Tutorial tutorial;
 
@@ -57,9 +57,6 @@ public class GameBrain : MonoBehaviour
     [SerializeField]
     private UIController ui;
     [HideInInspector]
-    public string key_try = "UP";
-    [HideInInspector]
-    public string key_skip = "RIGHT";
     
     public string jsonUrl;
     public string saveUrl;
@@ -73,6 +70,7 @@ public class GameBrain : MonoBehaviour
     private int decision = -1;
     private int outcome = 0;
     private int current_trial = 0;
+    public float decisionTimer = 0f;
 
     public string user_id = "DefaultUseer";
     public string game_id;
@@ -120,11 +118,6 @@ public class GameBrain : MonoBehaviour
             }
             else { ui.printEndScreen("No \"game_settings.json\" file in game directory."); }
             user_id = "Local";
-            if (Gamepad.current != null)
-            {
-                key_try = "A";
-                key_skip = "B";
-            }
         }
 
         // set unique game id
@@ -150,7 +143,7 @@ public class GameBrain : MonoBehaviour
             ParamsFromJson();
 
         if (!is_game_started) {
-            is_game_started = (questions.questions_left == 0 && tutorial.tutorials_left == 0);
+            is_game_started = (questions.activeSelf == false && tutorial.tutorials_left == 0);
             if (!is_game_started) return;
             else InitializeGame();
         }
@@ -208,6 +201,22 @@ public class GameBrain : MonoBehaviour
         // if time to player action
         if (animStateInf.IsName("CameraWaiting"))
         {
+            decisionTimer -= Time.deltaTime;
+            string timer = (game_params.game_settings.time_for_decision != 0) ? $"... {Mathf.CeilToInt(decisionTimer)}" : "";
+            ui.printDescription($"Waiting for action{timer}");
+            if (decisionTimer < 0 && game_params.game_settings.time_for_decision != 0)
+            {
+                // times off - skip
+                SaveTimestamp(2);
+                animatorCam.Play("CameraBlack", 0, 0f);
+                ui.printDescription("");
+                actionSkip.Play();
+                decision = 2;
+                outcome = -game_params.game_settings.cost_for_no_decision;
+                rubies += outcome;
+                ui.rubiesTarget = rubies;
+            }
+
             if (Keyboard.current.upArrowKey.isPressed || (Gamepad.current != null && Gamepad.current.aButton.isPressed))
             {
                 // try
@@ -295,6 +304,7 @@ public class GameBrain : MonoBehaviour
     private void NewRound()
     {
         // update round index
+        decisionTimer = (float)game_params.game_settings.time_for_decision;
         decision = -1;
         outcome = 0;
         current_trial++;
