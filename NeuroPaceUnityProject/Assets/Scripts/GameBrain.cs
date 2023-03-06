@@ -217,7 +217,7 @@ public class GameBrain : MonoBehaviour
                 trials_performed += 1;
                 actionWalk.Play();
                 decision = 1;
-                ScreenCapture.CaptureScreenshot("SomeLevel2.png", 2);
+                //ScreenCapture.CaptureScreenshot("SomeLevel2.png", 2);
             }
             else if (Keyboard.current.rightArrowKey.isPressed || (Gamepad.current != null && Gamepad.current.bButton.isPressed))
             {
