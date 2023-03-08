@@ -202,7 +202,7 @@ public class GameBrain : MonoBehaviour
         if (animStateInf.IsName("CameraWaiting"))
         {
             decisionTimer -= Time.deltaTime;
-            string timer = (game_params.game_settings.time_for_decision != 0) ? $"... {Mathf.CeilToInt(decisionTimer)}" : "";
+            string timer = (game_params.game_settings.time_for_decision != 0 && decisionTimer < game_params.game_settings.show_timer_from) ? $" {Mathf.CeilToInt(decisionTimer)}" : "";
             ui.printDescription($"Waiting for action{timer}");
             if (decisionTimer < 0 && game_params.game_settings.time_for_decision != 0)
             {
@@ -267,13 +267,13 @@ public class GameBrain : MonoBehaviour
         string output = "";
         output += $"\nexplosion_avg_chance: {explosion_avg_chance}, key_avg_chance: {key_avg_chance}";
         output += $"\nall: {trials_count}, to explode: {game_params.game_settings.trials_to_explode}, to reward: {game_params.game_settings.trials_to_show_key}";
-        for (int i = 0; i < 5; i++)
-            output += "\n" + DebugChances();
+        for (int i = 0; i < 10; i++)
+            output += "\n" + DebugChances(i);
         Debug.Log(output);
         */
     }
 
-    private string DebugChances()
+    private string DebugChances(int sim_num)
     {
         FillTrialsPool();
         int skip = 50;
@@ -290,7 +290,7 @@ public class GameBrain : MonoBehaviour
             else if (PlayEvent(trials_count, i, performed, rewarded, game_params.game_settings.trials_to_show_key, key_avg_chance))
                 rewarded += 1;
         }
-        return $"DEBUG: trials: {trials_count}, exploded: {exploded}, rewarded: {rewarded}";
+        return $"SIMULATION {sim_num}: trials: {trials_count}, skipped: {trials_count - performed}, exploded: {exploded}, rewarded: {rewarded}";
     }
 
     private void InitializeGame()
@@ -602,6 +602,7 @@ public class GameSettings
     public int trials_to_show_key;
     public float minimum_error;
     public int time_for_decision;
+    public int show_timer_from;
     public int cost_for_no_decision;
     public string goal_description;
     public string reward_description;

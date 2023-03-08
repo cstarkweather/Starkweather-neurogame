@@ -13,7 +13,8 @@
     "trials_to_explode": 5,
     "trials_to_show_key": 5,
     "minimum_error": 0.0005,
-    "time_for_decision": 5,
+    "time_for_decision": 15,
+	"show_timer_from": 5,
     "cost_for_no_decision": 1,
     "goal_description": "If you earn 50% more rubies than others, you are the winner!"
   }
