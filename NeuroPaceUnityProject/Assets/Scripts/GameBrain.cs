@@ -145,6 +145,8 @@ public class GameBrain : MonoBehaviour
 
         if (json_str == "")
             return;
+        else if (game_params == null)
+            ParamsFromJson();
 
         if (!is_game_started) {
             is_game_started = (questions.activeSelf == false && tutorial.tutorials_left == 0);
@@ -277,7 +279,6 @@ public class GameBrain : MonoBehaviour
         //Simulation(10, 0.0f);
         /* END DEBUG */
 
-        ParamsFromJson();
         FillTrialsPool();
         ui.rubiesTarget = rubies;
         // start 1st round
@@ -572,7 +573,6 @@ public class GameBrain : MonoBehaviour
 
     private void Simulation(int sim_num, float chance_to_skip)
     {
-        ParamsFromJson();
         FillTrialsPool();
         string output = "to_explode: ";
         for (int i = 0; i < game_params.trial_types.Count; i++)
@@ -611,6 +611,7 @@ public class GameBrain : MonoBehaviour
             output += $"\nSIMULATION {i}: trials: {trials_count_all}, skipped: {trials_count_all - performed.Sum()}, exploded: {exploded.Sum()}, rewarded: {rewarded.Sum()}";
         }
         Debug.Log(output);
+        ParamsFromJson(); //restart params
     }
 
 }
