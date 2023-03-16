@@ -4,19 +4,19 @@
     {"id":2, "bombs":4, "bombs_lit":1, "chests":6, "chests_lit":2},
     {"id":3, "bombs":4, "bombs_lit":2, "chests":6, "chests_lit":3},
     {"id":4, "bombs":4, "bombs_lit":3, "chests":6, "chests_lit":3},
-	{"id":5, "bombs":4, "bombs_lit":4, "chests":6, "chests_lit":3}
+    {"id":5, "bombs":4, "bombs_lit":4, "chests":6, "chests_lit":3}
   ],
   "game_settings":{
-	"number_of_groups" : 2,
+    "number_of_groups" : 2,
     "number_of_trials_per_trial_type": 8,
-	"trials_to_explode": [0, 4, 4, 4, 4],
+    "trials_to_explode": [0, 4, 4, 4, 4],
     "trials_to_reward": [4, 2, 2, 2, 2],
     "minimum_error": 0.01,
-	"cost_for_bomb_explosion": 1,
+    "cost_for_bomb_explosion": 1,
     "cost_for_no_decision": 1,
-	"reward_for_chest": 2,
+    "reward_for_chest": 2,
     "time_for_decision": 0,
-	"show_timer_from": 5,
+    "show_timer_from": 5,
     "goal_description": "If you earn 50% more rubies than others, you are the winner!"
   }
 }
