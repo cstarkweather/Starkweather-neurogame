@@ -5,7 +5,7 @@ cd /var/neuropace
 
 update_unity_build ()
 {
-  rm -f build.zip app/ WebGL/
+  rm -Rf build.zip app/ WebGL/
   wget https://cat-astrophe-games.party/neuropace/app/neuropace-release/master/LATEST/build.zip \
     --user=neuropace --password=`cat neuropace_builds_password.txt`
   unzip build.zip
