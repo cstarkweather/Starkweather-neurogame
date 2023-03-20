@@ -10,6 +10,5 @@ if [ '!' -f ~/public_html/settings.json ]; then
   chmod a+rw- ~/public_html/settings.json
 fi
 
-chmod -R a+rx ~/public_html/
-chmod a+rwx ~/public_html/logs/
-
+chmod -R a+rX ~/public_html/
+chmod a+rwX ~/public_html/logs/
