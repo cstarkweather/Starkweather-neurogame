@@ -6,7 +6,7 @@ $error = '';
 
 /* save game json */
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    
+
     if($_POST["submit"] == "Revert to default"){
         $json_str = file_get_contents('settings_default.json');
     }
@@ -17,12 +17,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $json = json_decode($json_str);
     if(json_last_error() === JSON_ERROR_NONE){
 
-    
-        $fp = fopen($file, 'w');  
+
+        $fp = fopen($file, 'w');
         if(!$fp) {
             throw new Exception('File open failed.');
         }
-            
+
         if(flock($fp, LOCK_EX)){
             fwrite($fp, $json_str);
             flock($fp, LOCK_UN);
@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $error = '&nbsp; UNSAVED. JSON parsing error';
     }
 }
-    
+
 ?>
 
 <!DOCTYPE html>
@@ -50,10 +50,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <p><label for="jconf">JSON:</label></p>
   <textarea id="jconf" name="jconf" rows="20" cols="80"><?php echo $json_str; ?></textarea>
   <br>
-  <input type="submit" name="submit" value="Save"> <input type="submit" name="submit" value="Revert to default"> <?php echo $error; ?><?php echo $error; ?>
+  <input type="submit" name="submit" value="Save"> <input type="submit" name="submit" value="Revert to default"> <?php echo $error; ?>
 </form>
 </body>
 </html>
-
-
-
