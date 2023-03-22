@@ -110,9 +110,19 @@ public class GameBrain : MonoBehaviour
 
         if (mode == Modes.Web)
         {
-            System.Uri unparsedUrl = new System.Uri(Application.absoluteURL);
-            if (HttpUtility.ParseQueryString(unparsedUrl.Query).Get("id") is not null)
-                user_id = HttpUtility.ParseQueryString(unparsedUrl.Query).Get("id");
+            System.Uri parsedUrl = new System.Uri(Application.absoluteURL);
+            switch (parsedUrl.Host) {
+                case "qcpcpslws001.ucsf.edu":
+                case "neurogame.ucsf.edu":
+                    jsonUrl = parsedUrl.Scheme + "://" + parsedUrl.Host + "/backend/settings.json";
+                    saveUrl = parsedUrl.Scheme + "://" + parsedUrl.Host + "/backend/save.php";
+                    break;
+                default:
+                    Debug.Log("Using default test backend on CAG servers");
+                    break;
+            }
+            if (HttpUtility.ParseQueryString(parsedUrl.Query).Get("id") is not null)
+                user_id = HttpUtility.ParseQueryString(parsedUrl.Query).Get("id");
             Debug.Log("Loading JSON from URL");
             StartCoroutine(GetJSONFromURL());
         }
