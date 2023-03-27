@@ -426,7 +426,7 @@ public class GameBrain : MonoBehaviour
         float ratio = designed_events_count / (events_performed + 1);
 
         if (ratio > 1)
-            interpolated_chance = Mathf.Lerp(event_avg_chance, 1 - game_params.game_settings.minimum_error, ratio);
+            interpolated_chance = Mathf.Lerp(event_avg_chance, 1 - game_params.game_settings.minimum_error, ratio - 1);
         else if (ratio < 1)
             interpolated_chance = Mathf.Lerp(event_avg_chance, game_params.game_settings.minimum_error, 1 - ratio);
 
