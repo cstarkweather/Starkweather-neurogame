@@ -3936,14 +3936,11 @@ MonoBehaviour:
   actionWalk: {fileID: 135913976}
   actionSkip: {fileID: 882212040}
   ui: {fileID: 1787182144}
-  key_try: UP
-  key_skip: RIGHT
   jsonUrl: https://cat-astrophe-games.party/neuropace/settings.json
   saveUrl: https://cat-astrophe-games.party/neuropace/save.php
   json_str: 
   is_game_started: 0
   is_game_finished: 0
-  decisionTimer: 0
   user_id: DefaultUser
   game_id: 
   timestamps:
@@ -3953,10 +3950,8 @@ MonoBehaviour:
   - 0
   - 0
   - 0
-  trials_count: 0
-  trials_performed: 0
-  explosions_performed: 0
-  keys_performed: 0
+  decisionTimer: 0
+  trials_count_all: 0
 --- !u!82 &963194232
 AudioSource:
   m_ObjectHideFlags: 0

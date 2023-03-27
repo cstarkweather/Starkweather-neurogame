@@ -226,13 +226,20 @@ public class GameBrain : MonoBehaviour
             {
                 // times off - skip
                 SaveTimestamp(2);
-                animatorCam.Play("CameraBlack", 0, 0f);
+                animatorCam.Play("CameraTimeIsOff", 0, 0f);
                 ui.printDescription("");
                 actionSkip.Play();
                 decision = 2;
                 outcome = -game_params.game_settings.cost_for_no_decision;
                 rubies += outcome;
                 ui.rubiesTarget = rubies;
+
+                string desc = (Mathf.Abs(outcome) == 1) ? " RUBY!" : " RUBIES!";
+                ui.printInfo(outcome + desc);
+                for (int i = 0; i < Mathf.Abs(outcome); i++)
+                    Instantiate(RubyLost, rubiesUIParent);
+                bombParent.GetComponent<AudioSource>().Play();
+                lostRubiesSFX.Play();
             }
 
             if (Keyboard.current.upArrowKey.isPressed || (Gamepad.current != null && Gamepad.current.aButton.isPressed))
