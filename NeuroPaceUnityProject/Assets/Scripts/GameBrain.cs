@@ -121,8 +121,6 @@ public class GameBrain : MonoBehaviour
                     Debug.Log("Using default test backend on CAG servers");
                     break;
             }
-            // avoid caching settings.json
-            jsonUrl += "?version=" + random.Next().ToString();
             if (HttpUtility.ParseQueryString(parsedUrl.Query).Get("id") is not null)
                 user_id = HttpUtility.ParseQueryString(parsedUrl.Query).Get("id");
             Debug.Log("Loading JSON from URL");
