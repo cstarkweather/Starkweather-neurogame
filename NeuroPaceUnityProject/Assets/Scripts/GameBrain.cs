@@ -431,10 +431,10 @@ public class GameBrain : MonoBehaviour
     {
         float designed_events_count = ((float)(trials_performed) / trials) * events_expected;
         if (events_performed > designed_events_count)
-            return ((float)random.NextDouble() < game_params.game_settings.minimum_error)
+            return ((float)random.NextDouble() < min_error);
         else
 			if (events_performed < designed_events_count)
-            return ((float)random.NextDouble() < 1 - game_params.game_settings.minimum_error);
+            return ((float)random.NextDouble() < 1 - min_error);
 			else
 				return ((float)random.NextDouble() < event_avg_chance);
 		
