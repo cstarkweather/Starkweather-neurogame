@@ -429,17 +429,19 @@ public class GameBrain : MonoBehaviour
 
     public bool PlayEvent(float trials, int trial, int trials_performed, int events_performed, int events_expected, float event_avg_chance)
     {
-        int trials_skipped = trial - trials_performed;
-        float interpolated_chance = event_avg_chance;
-        float designed_events_count = ((float)(trial - trials_skipped + 1) / trials) * events_expected;
-        float ratio = designed_events_count / (events_performed + 1);
-
-        if (ratio > 1)
-            interpolated_chance = Mathf.Lerp(event_avg_chance, 1 - game_params.game_settings.minimum_error, ratio - 1);
-        else if (ratio < 1)
-            interpolated_chance = Mathf.Lerp(event_avg_chance, game_params.game_settings.minimum_error, 1 - ratio);
-
-        return ((float)random.NextDouble() < interpolated_chance);
+        float designed_events_count = ((float)(trials_performed - 1) / trials) * events_expected;
+        if (events_performed > designed_events_count)
+        {
+            return ((float)random.NextDouble() < game_params.game_settings.minimum_error);
+        }
+        else if (events_performed < designed_events_count)
+        {
+            return ((float)random.NextDouble() < 1 - game_params.game_settings.minimum_error);
+        }
+        else
+        {
+            return ((float)random.NextDouble() < event_avg_chance);
+        }
     }
 
     private void FillTrialsPool()
