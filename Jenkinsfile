@@ -39,6 +39,7 @@ pipeline {
         }
       }
     }
+    /* //  not needed now, disabled to not keep Unity for Linux installed
     stage('Build Linux64 (Debug)') {
       agent {
         label 'windows-unity-builder'
@@ -50,6 +51,7 @@ pipeline {
         }
       }
     }
+    */
     stage('Build WebGL (Debug)') {
       agent {
         label 'windows-unity-builder'
