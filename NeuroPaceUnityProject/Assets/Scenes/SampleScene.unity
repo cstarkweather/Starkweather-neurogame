@@ -526,9 +526,9 @@ MonoBehaviour:
     reaching the treasure chests.
 
 
-    The bombs have a 50% chance of ALL exploding.
-    If there are 3 lit bombs, there is a 50% chance that ALL THREE will explode,
-    and 50% chance that NONE of them will explode.
+    The bombs have a 40% chance of ALL exploding.
+    If there are 3 lit bombs, there is a 40% chance that ALL THREE will explode,
+    and 60% chance that NONE of them will explode.
 
 
     Example: If 3 bombs explode,
@@ -7351,12 +7351,12 @@ MonoBehaviour:
   m_text: '
 
 
-    The glowing treasure chests have a 50% chance of containing rubies.
+    The glowing treasure chests have a 70% chance of containing rubies.
     The number of glowing treasure chests indicates the number of rubies.
 
 
     Example:
-    3 glowing treasure chests means that there is a 50% chance that you will earn
+    3 glowing treasure chests means that there is a 70% chance that you will earn
     3 rubies once you reach the treasure chests.'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
