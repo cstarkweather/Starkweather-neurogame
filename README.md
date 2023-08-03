@@ -18,13 +18,16 @@ The backend (with configurable settings JSON and logs):
 
 Application frontend:
 
-- On qcpcpslws001.ucsf.edu, access by http://qcpcpslws001.ucsf.edu/ when in UCSF VPN.
+- Public: https://neurogame.ucsf.edu/
+
+- Through VPN: On qcpcpslws001.ucsf.edu, access by http://qcpcpslws001.ucsf.edu/ when in UCSF VPN.
 
 The backend:
 
 - Requires a username/password (see email Michalis->Clara _"Deployment of application on UCSF server - almost done"_ on 2023-03-20).
-- Edit settings JSON online: http://qcpcpslws001.ucsf.edu/backend/edit/ .
-- Logs can be viewed online: http://qcpcpslws001.ucsf.edu/backend/logs/
+
+- Edit settings JSON online: https://neurogame.ucsf.edu/backend/edit/ .
+- Logs can be viewed online: https://neurogame.ucsf.edu/backend/logs/
 
 ## Updating on UCSF server
 
