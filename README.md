@@ -1,6 +1,6 @@
 # Starkweather-neurogame
 
-Unity code for first-person videogame used in the manuscript "An orbitofrontal microcircuit for approach-avoidance decision-making". This readme will go through 1) how to toggle game settings relevant to neuroscientists (such as reward/punishment probabilities), 2) how data is recorded (reaction times, trial types, outcomes...), and 3) how to compile the Unity code into a playable .exe file on your computer.
+Unity code for first-person videogame used in the manuscript "An orbitofrontal microcircuit for approach-avoidance decision-making" (see and play webGL version here: https://neurogame.ucsf.edu/). This readme will go through 1) how to toggle game settings relevant to neuroscientists (such as reward/punishment probabilities), 2) how data is recorded (reaction times, trial types, outcomes...), and 3) how to compile the Unity code into a playable .exe file on your computer.
 
 ## How to easily toggle game settings relevant to neuroscientists
 
