@@ -2,7 +2,7 @@
 
 Unity code for first-person videogame used in the manuscript "An orbitofrontal microcircuit for approach-avoidance decision-making" (see and play webGL version here: https://neurogame.ucsf.edu/). This readme will go through 1) how to toggle game settings relevant to neuroscientists (such as reward/punishment probabilities), 2) how data is recorded (reaction times, trial types, outcomes...), and 3) how to compile the Unity code into a playable .exe file on your computer.
 
-## How to easily toggle game settings relevant to neuroscientists
+## How to toggle game settings relevant to neuroscientists
 
 Navigate to Starkweather-neurogame-->NeuroPaceUnityProject and you will see a game_settings.json file. This is where you can toggle experimental settings. Here you can specify trial types, where each distinct trial type has a certain magnitude of bombs lit and treasures lit.
 
