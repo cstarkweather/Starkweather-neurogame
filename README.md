@@ -24,14 +24,17 @@ Variable definitions and explanations of default settings used in the manuscript
 
 Data is recorded in a timestamped .txt logfile in the **same location** that you choose to store the Neuropace.exe file (this is the file that contains the playable game). This is what a typical logfile looks like (this is Subject 5 from the manuscript):
 
-<pre> ``` 0 6 0 0 5 6
+```
+0 6 0 0 5 6
 0 3 1 2 1001 1667 6176 7683 9184 11185
 1 3 1 -4 870 1535 5273 6780 0 8790
 2 7 1 0 1107 1778 2672 4179 5680 7682
 3 1 0 0 871 1536 2914 0 0 2920
 4 4 1 4 1177 1848 2048 3555 5056 7058
 5 4 1 0 1248 1913 2431 3938 5439 7440
-...``` <pre>
+...
+```
+
 
 The first line contains the mood questionnaire ratings from the survey at the beginning of the game. The columns in the second line onwards indicates the following:
 1) trial number (starts at 0)
@@ -50,7 +53,8 @@ The first line contains the mood questionnaire ratings from the survey at the be
 
 1. Install [Unity Hub](https://unity.com/download). FYI: I have tested opening and compiling the code with Unity2021.3.16.
 2. Clone or download this repository
-3. Open Unity Hub, click **“Add project”**, and select: Starkweather-neurogame/NeuroPaceUnityProject. You **must** selected the inner "NeuroPaceUnityProject" folder. **Do not** select the outer Starkweather-neurogame folder or any other outer folder.
+3. Open Unity Hub, click **“Add Project”**, and select: Starkweather-neurogame/NeuroPaceUnityProject. You **must** select the inner "NeuroPaceUnityProject" folder. **Do not** select the outer Starkweather-neurogame folder or any other outer folder.
 4. Once the project is open in Unity, do the following. In the **Project** pane, navigate to: Assets/Scenes/SampleScene.unity. Then double-click `SampleScene.unity` to open it. You should see a long hallway with the game objects (bombs, treasures...) all contained inside a large mausoleum.
 5. Click `File ▸ Build Settings...`. Select **Platform** = `PC, Mac & Linux`, **Target** = `Windows`. Click **“Add Open Scenes”**. Then Click **“Build”** and choose an output folder.
 6. The compiled Neuropace.exe file should then appear in your chosen output folder. This .exe file is compiled with the game contingencies you set inside the game_settings json file. It can be dropped onto your computer (I have run it on Lenovo Thinkstation and Lenovo laptops...) to be opened and played. Once you start playing, it will record the results in a logfile in the **same folder** in which you store the .exe file.
+
