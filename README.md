@@ -54,7 +54,7 @@ The first line contains the mood questionnaire ratings from the survey at the be
 1. Install [Unity Hub](https://unity.com/download). FYI: I have tested opening and compiling the code with Unity2021.3.16.
 2. Clone or download this repository
 3. Open Unity Hub, click **“Add Project”**, and select: Starkweather-neurogame/NeuroPaceUnityProject. You **must** select the inner "NeuroPaceUnityProject" folder. **Do not** select the outer Starkweather-neurogame folder or any other outer folder.
-4. Once the project is open in Unity, click File → Open Scene. Then navigate to Assets/SampleScene and double-click SampleScene.unity to open it. You should see a long hallway with the game objects (bombs, treasures, etc.) all contained inside a large mausoleum.
+4. Once the project is open in Unity, click File → Open Scene. Then navigate to Assets/Scenes and double-click SampleScene.unity to open it. You should see a long hallway with the game objects (bombs, treasures, etc.) all contained inside a large mausoleum.
 5. Click `File ▸ Build Settings...`. Select **Platform** = `PC, Mac & Linux`, **Target** = `Windows`. Click **“Add Open Scenes”**. Then Click **“Build”** and choose an output folder.
 6. The compiled Neuropace.exe file should then appear in your chosen output folder. This .exe file is compiled with the game contingencies you set inside the game_settings json file. It can be dropped onto your computer (I have run it on Lenovo Thinkstation and Lenovo laptops...) to be opened and played. Once you start playing, it will record the results in a logfile in the **same folder** in which you store the .exe file.
 
